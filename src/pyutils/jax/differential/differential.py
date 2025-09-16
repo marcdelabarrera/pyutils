@@ -1,6 +1,6 @@
 from jax import Array
 import jax.numpy as jnp
-from jax.experimental.sparse import BCOO
+from jax.experimental.sparse import BCOO, eye
 
 
 def spdiagm(x:Array, k:int=0) -> BCOO:
@@ -46,25 +46,25 @@ def compute_second_derivative(x:Array) -> BCOO:
 
 def compute_D_x(x:Array, y:Array, direction:str)-> BCOO:
     if direction == 'forward':
-        return kron(compute_forward_derivative(x), jnp.eye(y.shape[0]))
+        return kron(compute_forward_derivative(x), eye(y.shape[0]))
     elif direction == 'backward':
-        return kron(compute_backward_derivative(x), jnp.eye(y.shape[0]))
+        return kron(compute_backward_derivative(x), eye(y.shape[0]))
     else:
         raise ValueError("Direction must be 'forward' or 'backward'")
     
 def compute_D_y(x:Array, y:Array, direction:str)-> BCOO:
     if direction == 'forward':
-        return kron(jnp.eye(x.shape[0]), compute_forward_derivative(y))
+        return kron(eye(x.shape[0]), compute_forward_derivative(y))
     elif direction == 'backward':
-        return kron(jnp.eye(x.shape[0]), compute_backward_derivative(y))
+        return kron(eye(x.shape[0]), compute_backward_derivative(y))
     else:
         raise ValueError("Direction must be 'forward' or 'backward'")
     
 def compute_D_xx(x:Array, y:Array)-> BCOO:
-    return kron(compute_second_derivative(x), jnp.eye(y.shape[0]))
+    return kron(compute_second_derivative(x), eye(y.shape[0]))
 
 def compute_D_yy(x:Array, y:Array)-> BCOO:
-    return kron(jnp.eye(x.shape[0]), compute_second_derivative(y))
+    return kron(eye(x.shape[0]), compute_second_derivative(y))
 
 def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str)-> BCOO:
     if direction_x == 'forward' and direction_y == 'forward':
