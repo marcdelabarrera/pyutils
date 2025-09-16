@@ -13,7 +13,6 @@ def spdiagm(x:Array, k:int=0) -> BCOO:
         col = jnp.arange(n-abs(k))
     return BCOO((x, jnp.column_stack((row, col))), shape=(n, n))
 
-
 def kron(A: BCOO, B: BCOO) -> BCOO:
     """Kronecker producte de dues matrius disperses BCOO."""
     (m, n) = A.shape
@@ -44,3 +43,37 @@ def compute_second_derivative(x:Array) -> BCOO:
     dx = jnp.diff(x)
     dx2 = jnp.concatenate((dx[:1],dx))*jnp.concatenate((dx,dx[-1:]))
     return spdiagm(1/dx2[:-1], k=1) + spdiagm(1/dx2[1:], k=-1) - spdiagm(jnp.full(n,2).at[0].set(1).at[-1].set(1)/dx2)
+
+def compute_D_x(x:Array, y:Array, direction:str)-> BCOO:
+    if direction == 'forward':
+        return kron(compute_forward_derivative(x), jnp.eye(y.shape[0]))
+    elif direction == 'backward':
+        return kron(compute_backward_derivative(x), jnp.eye(y.shape[0]))
+    else:
+        raise ValueError("Direction must be 'forward' or 'backward'")
+    
+def compute_D_y(x:Array, y:Array, direction:str)-> BCOO:
+    if direction == 'forward':
+        return kron(jnp.eye(x.shape[0]), compute_forward_derivative(y))
+    elif direction == 'backward':
+        return kron(jnp.eye(x.shape[0]), compute_backward_derivative(y))
+    else:
+        raise ValueError("Direction must be 'forward' or 'backward'")
+    
+def compute_D_xx(x:Array, y:Array)-> BCOO:
+    return kron(compute_second_derivative(x), jnp.eye(y.shape[0]))
+
+def compute_D_yy(x:Array, y:Array)-> BCOO:
+    return kron(jnp.eye(x.shape[0]), compute_second_derivative(y))
+
+def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str)-> BCOO:
+    if direction_x == 'forward' and direction_y == 'forward':
+        return kron(compute_forward_derivative(x), compute_forward_derivative(y))
+    elif direction_x == 'backward' and direction_y == 'backward':
+        return kron(compute_backward_derivative(x), compute_backward_derivative(y))
+    elif direction_x == 'forward' and direction_y == 'backward':
+        return kron(compute_forward_derivative(x), compute_backward_derivative(y))
+    elif direction_x == 'backward' and direction_y == 'forward':
+        return kron(compute_backward_derivative(x), compute_forward_derivative(y))
+    else:
+        raise ValueError("Directions must be 'forward' or 'backward'")
