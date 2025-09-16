@@ -77,3 +77,32 @@ def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str)-> BCOO:
         return kron(compute_backward_derivative(x), compute_forward_derivative(y))
     else:
         raise ValueError("Directions must be 'forward' or 'backward'")
+    
+
+def compute_gradient(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)-> Array:
+    if f.shape != (x.shape[0], y.shape[0]):
+        raise ValueError("f must be of shape (len(x), len(y))")
+    if direction_x not in ['forward', 'backward']:
+        raise ValueError("direction_x must be 'forward' or 'backward'")
+    if direction_y not in ['forward', 'backward']:
+        raise ValueError("direction_y must be 'forward' or 'backward'")
+    
+    return jnp.stack(((compute_D_x(x, y, direction_x)@f.flatten()).reshape(f.shape),
+                      (compute_D_y(x, y, direction_y)@f.flatten()).reshape(f.shape)), axis = -1)
+
+def compute_hessian(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)->Array:
+    if f.shape != (x.shape[0], y.shape[0]):
+        raise ValueError("f must be of shape (len(x), len(y))")
+    if direction_x not in ['forward', 'backward']:
+        raise ValueError("direction_x must be 'forward' or 'backward'")
+    if direction_y not in ['forward', 'backward']:
+        raise ValueError("direction_y must be 'forward' or 'backward'")
+    D_xx = compute_D_xx(x, y)
+    f_xx = (D_xx @ f.flatten()).reshape(f.shape)
+    D_yy = compute_D_yy(x, y)
+    f_yy = (D_yy @ f.flatten()).reshape(f.shape)
+    D_xy = compute_D_xy(x, y, direction_x, direction_y)
+    f_xy = (D_xy @ f.flatten()).reshape(f.shape)
+
+    return  jnp.stack((jnp.stack((f_xx, f_xy), axis=-1),
+                    jnp.stack((f_xy, f_yy), axis=-1)), axis=-1)
