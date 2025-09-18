@@ -4,32 +4,18 @@ from jax.experimental.sparse import BCOO, eye
 
 
 
-
-
-def compute_vec_index(index, shape, order="C"):
-    """
-    Computes the vector index corresponding to a multidimensional index in a tensor of the specified shape, using Python (0-based) convention.
-
-    Args:
-        index (tuple or array): The multidimensional index (0-based, as in Python/NumPy).
-        shape (tuple or array): The shape of the tensor.
-        order (str): 'C' (C/row-major, default) or 'F' (Fortran/column-major).
-    Returns:
-        int: The vector index (0-based, as in Python/NumPy's ravel_multi_index).
-    """
-    index = jnp.asarray(index)
-    shape = jnp.asarray(shape)
-    assert jnp.all(index < shape), "Index out of bounds"
+def compute_vec_index(index:tuple, shape:tuple, order = "C")-> int:
+    if jnp.any(jnp.array(index) >= jnp.array(shape)):
+        raise ValueError("Index out of bounds")
     if order == "C":
-        # C order: last axis changes fastest (row-major)
-        strides = jnp.cumprod(jnp.concatenate((jnp.array([1]), shape[::-1][:-1])))[::-1]
-        return int(jnp.sum(index * strides))
-    elif order == "F":
-        # Fortran order: first axis changes fastest (column-major)
-        strides = jnp.cumprod(jnp.concatenate((jnp.array([1]), shape[:-1])))
-        return int(jnp.sum(index * strides))
-    else:
-        raise ValueError("order must be either C (row-major) or F (column-major)")
+        for i in range(len(index)):
+            if i == 0:
+                vec_index = index[-1]
+            else:
+                vec_index += index[-(i+1)] * jnp.prod(jnp.array(shape[-i:]))
+        return int(vec_index)
+
+            
 
 def spdiagm(x:Array, k:int=0) -> BCOO:
     n = x.shape[0]+abs(k)
@@ -134,3 +120,237 @@ def compute_hessian(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)
 
     return  jnp.stack((jnp.stack((f_xx, f_xy), axis=-1),
                     jnp.stack((f_xy, f_yy), axis=-1)), axis=-1)
+
+
+def build_D_xy(x: Array, y: Array) -> BCOO:
+    shape = (len(x), len(y))
+    D_row = jnp.zeros(4*len(x)*len(y), dtype=int)
+    D_col = jnp.zeros(4*len(x)*len(y), dtype=int)
+    D_val = jnp.zeros(4*len(x)*len(y))
+    row_index, k = 0, 0
+    for ix in range(len(x)):
+        for iy in range(len(y)):
+            if 0<ix<(len(x)-1) and 0<iy<(len(y)-1):
+                denom = (x[ix+1]-x[ix-1])*(y[iy+1]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy+1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == 0 and 0<iy<(len(y)-1):
+                denom = (x[ix+1]-x[ix])*(y[iy+1]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy+1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == (len(x)-1) and 0<iy<(len(y)-1):
+                denom = (x[ix]-x[ix-1])*(y[iy+1]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy+1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif 0<ix<(len(x)-1) and iy == 0:
+                denom = (x[ix+1]-x[ix-1])*(y[iy+1]-y[iy])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy+1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif 0<ix<(len(x)-1) and iy == (len(y)-1):
+                denom = (x[ix+1]-x[ix-1])*(y[iy]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == 0 and iy == 0:
+                denom = (x[ix+1]-x[ix])*(y[iy+1]-y[iy])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == 0 and iy == (len(y)-1):
+                denom = (x[ix+1]-x[ix])*(y[iy]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix+1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == (len(x)-1) and iy == 0:  
+                denom = (x[ix]-x[ix-1])*(y[iy+1]-y[iy])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy+1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            elif ix == (len(x)-1) and iy == (len(y)-1):
+                denom = (x[ix]-x[ix-1])*(y[iy]-y[iy-1])
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix, iy-1), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy), shape)
+                D_val[k] = -1/denom
+                k += 1
+
+                D_row[k] = row_index
+                D_col[k] = compute_vec_index((ix-1, iy-1), shape)
+                D_val[k] = 1/denom
+                k += 1
+            row_index += 1  
+    return BCOO((D_val[:k], jnp.column_stack((D_row[:k], D_col[:k]))), shape=(len(x)*len(y), len(x)*len(y)))
+
+
+def build_D_xy(x, y) -> BCOO:
+    x = jnp.asarray(x); y = jnp.asarray(y)
+    nx, ny = int(x.size), int(y.size)
+    shape2d = (nx, ny); n = nx * ny
+
+    cap = 4 * n
+    D_row = jnp.zeros(cap, dtype=jnp.int32)
+    D_col = jnp.zeros(cap, dtype=jnp.int32)
+    D_val = jnp.zeros(cap, dtype=jnp.float32)
+
+    k = 0
+    for ix in range(nx):
+        il = max(ix - 1, 0)
+        ir = min(ix + 1, nx - 1)
+        dx = float(x[ir] - x[il])
+        for iy in range(ny):
+            jl = max(iy - 1, 0)
+            jr = min(iy + 1, ny - 1)
+            dy = float(y[jr] - y[jl])
+
+            if dx == 0.0 or dy == 0.0:
+                continue  # malla degenerada al node
+
+            denom = dx * dy
+            row = compute_vec_index((ix, iy), shape2d)
+
+            # (+) f_{ir,jr}
+            D_row = D_row.at[k].set(row)
+            D_col = D_col.at[k].set(compute_vec_index((ir, jr), shape2d))
+            D_val = D_val.at[k].set( 1.0 / denom); k += 1
+
+            # (-) f_{ir,jl}
+            D_row = D_row.at[k].set(row)
+            D_col = D_col.at[k].set(compute_vec_index((ir, jl), shape2d))
+            D_val = D_val.at[k].set(-1.0 / denom); k += 1
+
+            # (-) f_{il,jr}
+            D_row = D_row.at[k].set(row)
+            D_col = D_col.at[k].set(compute_vec_index((il, jr), shape2d))
+            D_val = D_val.at[k].set(-1.0 / denom); k += 1
+
+            # (+) f_{il,jl}
+            D_row = D_row.at[k].set(row)
+            D_col = D_col.at[k].set(compute_vec_index((il, jl), shape2d))
+            D_val = D_val.at[k].set( 1.0 / denom); k += 1
+
+    idx = jnp.column_stack((D_row[:k], D_col[:k]))
+    mat = BCOO((D_val[:k], idx), shape=(n, n))
+    # Opcional: combina duplicats (pot aparèixer a les vores)
+    # mat = mat.sum_duplicates()
+    return mat
