@@ -3,6 +3,34 @@ import jax.numpy as jnp
 from jax.experimental.sparse import BCOO, eye
 
 
+
+
+
+def compute_vec_index(index, shape, order="C"):
+    """
+    Computes the vector index corresponding to a multidimensional index in a tensor of the specified shape, using Python (0-based) convention.
+
+    Args:
+        index (tuple or array): The multidimensional index (0-based, as in Python/NumPy).
+        shape (tuple or array): The shape of the tensor.
+        order (str): 'C' (C/row-major, default) or 'F' (Fortran/column-major).
+    Returns:
+        int: The vector index (0-based, as in Python/NumPy's ravel_multi_index).
+    """
+    index = jnp.asarray(index)
+    shape = jnp.asarray(shape)
+    assert jnp.all(index < shape), "Index out of bounds"
+    if order == "C":
+        # C order: last axis changes fastest (row-major)
+        strides = jnp.cumprod(jnp.concatenate((jnp.array([1]), shape[::-1][:-1])))[::-1]
+        return int(jnp.sum(index * strides))
+    elif order == "F":
+        # Fortran order: first axis changes fastest (column-major)
+        strides = jnp.cumprod(jnp.concatenate((jnp.array([1]), shape[:-1])))
+        return int(jnp.sum(index * strides))
+    else:
+        raise ValueError("order must be either C (row-major) or F (column-major)")
+
 def spdiagm(x:Array, k:int=0) -> BCOO:
     n = x.shape[0]+abs(k)
     if k >= 0:
