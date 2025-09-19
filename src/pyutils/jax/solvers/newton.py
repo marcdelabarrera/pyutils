@@ -19,7 +19,8 @@ class SolutionNotFoundError(Exception):
     pass
 
 
-def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"max":4,"n":1000}})->jnp.ndarray:
+def newton_step(f:callable, J:callable, x:Array, has_aux:bool=False, config={"steps":{"min":1e-8,"max":4,"n":1000}})->Array:
+    f = f if not has_aux else lambda x: f(x)[0]
     delta = jnp.linalg.solve(J(x), -f(x))
     step = jnp.logspace(jnp.log10(config["steps"]["max"]), jnp.log10(config["steps"]["min"]), config["steps"]["n"])
     x_new = x.reshape(-1,1) + step * delta.reshape(-1,1)
@@ -43,7 +44,7 @@ def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False, **kw
     x = x0
     J = jax.jacfwd(f, has_aux = has_aux)
     for it in range(maxit):
-        x, stop = newton_step(f,J, x, **kwargs)
+        x, stop = newton_step(f,J, x, has_aux=has_aux, **kwargs)
         f_x = f(x)
         if stop:
             break
