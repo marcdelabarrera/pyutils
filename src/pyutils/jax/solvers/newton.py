@@ -20,14 +20,22 @@ class SolutionNotFoundError(Exception):
 
 
 def newton_step(f:callable, J:callable, x:Array, has_aux:bool=False, config={"steps":{"min":1e-8,"max":4,"n":1000}})->Array:
-    f = f if not has_aux else lambda x: f(x)[0]
-    delta = jnp.linalg.solve(J(x), -f(x))
+    fx = f(x)[0] if has_aux else f(x)
+    
+    delta = jnp.linalg.solve(J(x), -fx)
     step = jnp.logspace(jnp.log10(config["steps"]["max"]), jnp.log10(config["steps"]["min"]), config["steps"]["n"])
     x_new = x.reshape(-1,1) + step * delta.reshape(-1,1)
-    candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
+    #candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
+    if has_aux:
+        candidates = jnp.linalg.norm(jax.vmap(lambda x: f(x)[0], in_axes=1)(x_new), axis=1)
+    else:
+        candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
     x_new = x_new[:,jnp.argmin(candidates)]
-    if jnp.linalg.norm(f(x_new)) > jnp.linalg.norm(f(x)):
-        warnings.warn(f"Line search failed: no acceptable step size found and error is {jnp.linalg.norm(f(x))}")
+    
+    fx_new = f(x_new)[0] if has_aux else f(x_new)
+    
+    if jnp.linalg.norm(fx_new) > jnp.linalg.norm(fx):
+        warnings.warn(f"Line search failed: no acceptable step size found and error is {jnp.linalg.norm(fx)}")
         stop = True
     else:
         stop = False
