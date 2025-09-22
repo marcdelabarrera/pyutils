@@ -18,7 +18,6 @@ def compute_vec_index(index:tuple, shape:tuple, order = "C")-> int:
                 vec_index += index[-(i+1)] * jnp.prod(jnp.array(shape[-i:]))
         return int(vec_index)
 
-            
 
 def spdiagm(x:Array, k:int=0) -> BCOO:
     n = x.shape[0]+abs(k)
