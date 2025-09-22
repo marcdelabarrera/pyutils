@@ -1,6 +1,6 @@
 from jax import Array
 import jax.numpy as jnp
-from jax.experimental.sparse import BCOO, eye
+from jax.experimental.sparse import BCOO, eye, empty
 
 
 
@@ -27,8 +27,12 @@ def spdiagm(x:Array, k:int=0) -> BCOO:
         col = jnp.arange(n-abs(k))
     return BCOO((x, jnp.column_stack((row, col))), shape=(n, n))
 
-def spzero(shape:tuple) -> BCOO:
-    return BCOO((jnp.array([]), jnp.array([[],[]], dtype=int)), shape=shape)
+def spzeros(shape:tuple, **kwargs) -> BCOO:
+    if isinstance(shape, int):
+        shape = (shape, shape)
+    elif len(shape) == 1:
+        shape = (shape[0], shape[0])
+    return empty(shape, **kwargs)
 
 def kron(A: BCOO, B: BCOO) -> BCOO:
     """Kronecker producte de dues matrius disperses BCOO."""
