@@ -24,6 +24,11 @@ def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"ma
     step = jnp.logspace(jnp.log10(config["steps"]["max"]), jnp.log10(config["steps"]["min"]), config["steps"]["n"])
     x_new = x.reshape(-1,1) + step * delta.reshape(-1,1)
     candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
+    if jnp.any(jnp.isnan(candidates)):
+        candidates = jnp.where(jnp.isnan(candidates), jnp.inf, candidates)
+        warnings.warn("NaN encountered in line search candidates, ignoring those candidates.")
+    elif jnp.all(jnp.isnan(candidates)):
+        raise SolutionNotFoundError("All candidates in line search are NaN.")
     x_new = x_new[:,jnp.argmin(candidates)]
     step_size = step[jnp.argmin(candidates)]
     if jnp.linalg.norm(f(x_new)) > jnp.linalg.norm(f(x)):
