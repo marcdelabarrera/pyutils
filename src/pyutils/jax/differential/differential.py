@@ -29,8 +29,8 @@ def spdiagm(x:Array, k:int=0) -> BCOO:
         col = jnp.arange(n-abs(k))
     return BCOO((x, jnp.column_stack((row, col))), shape=(n, n))
 
-def speye(n:int)->BCOO:
-    return eye(n)
+def speye(n:int, **kwargs)->BCOO:
+    return eye(n, **kwargs)
 
 def spzeros(shape:tuple, **kwargs) -> BCOO:
     if isinstance(shape, int):
