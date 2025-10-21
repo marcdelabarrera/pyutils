@@ -29,12 +29,17 @@ def spdiagm(x:Array, k:int=0) -> BCOO:
         col = jnp.arange(n-abs(k))
     return BCOO((x, jnp.column_stack((row, col))), shape=(n, n))
 
+def speye(n:int)->BCOO:
+    return eye(n)
+
 def spzeros(shape:tuple, **kwargs) -> BCOO:
     if isinstance(shape, int):
         shape = (shape, shape)
     elif len(shape) == 1:
         shape = (shape[0], shape[0])
     return empty(shape, **kwargs)
+
+
 
 def kron(A: BCOO, B: BCOO) -> BCOO:
     """Kronecker producte de dues matrius disperses BCOO."""
