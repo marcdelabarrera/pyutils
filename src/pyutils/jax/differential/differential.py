@@ -60,11 +60,36 @@ def kron(A: BCOO, B: BCOO) -> BCOO:
 
     return BCOO((new_data, new_idx), shape=(m * p, n * q))
 
-def compute_forward_derivative(x:Array) -> BCOO:
-    return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([0]))))
+def compute_forward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
+    """
+    Computes the matrix D such that D@f = df/dx using forward differences. Given a vector
+    x[i] for i = 0,...,n-1 and a function f defined on those points, then
 
-def compute_backward_derivative(x:Array) -> BCOO:
-    return spdiagm(jnp.concatenate((jnp.array([0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
+    df_i/dx = (f_{i+1} - f_{i}) / (x_{i+1} - x_{i})
+
+    if ghost_node is False, then df[n-1]/dx = 0. If ghost_node is True
+    then df[n-1]/dx = -f[n-1] / (x[n-1] - x[n-2]). That is, assumes a ghost node
+    at position x[n] = x[n-1] + (x[n-1]-x[n-2]) with f[n] = 0.
+    """
+    if ghost_node:
+        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), 1/(x[-1]-x[-2]))))
+    else:
+        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([0]))))
+
+def compute_backward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
+    """
+    Computes the matrix D such that D@f = df/dx using backward differences. Given a vector
+    x[i] for i = 0,...,n-1 and a function f defined on those points, then
+    df_i/dx = (f_i - f_{i-1}) / (x_i - x_{i-1})
+
+    if ghost_node is False, then df[0]/dx = 0. If ghost_node is True
+    then df[0]/dx = f[0] / (x[1] - x[0]). That is, assumes a ghost node
+    at position x[-1] = x[0] - (x[1]-x[0]) with f[-1] = 0.
+    """
+    if ghost_node:
+        return spdiagm(jnp.concatenate((1/(x[1]-x[0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
+    else:
+        return spdiagm(jnp.concatenate((jnp.array([0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
 
 def compute_second_derivative(x:Array) -> BCOO:
     n = x.shape[0]
