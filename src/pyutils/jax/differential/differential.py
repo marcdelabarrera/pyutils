@@ -97,19 +97,19 @@ def compute_second_derivative(x:Array) -> BCOO:
     dx2 = jnp.concatenate((dx[:1],dx))*jnp.concatenate((dx,dx[-1:]))
     return spdiagm(1/dx2[:-1], k=1) + spdiagm(1/dx2[1:], k=-1) - spdiagm(jnp.full(n,2).at[0].set(1).at[-1].set(1)/dx2)
 
-def compute_D_x(x:Array, y:Array, direction:str)-> BCOO:
+def compute_D_x(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
     if direction == 'forward':
-        return kron(compute_forward_derivative(x), eye(y.shape[0]))
+        return kron(compute_forward_derivative(x, ghost_node=ghost_node), eye(y.shape[0]))
     elif direction == 'backward':
-        return kron(compute_backward_derivative(x), eye(y.shape[0]))
+        return kron(compute_backward_derivative(x, ghost_node=ghost_node), eye(y.shape[0]))
     else:
         raise ValueError("Direction must be 'forward' or 'backward'")
-    
-def compute_D_y(x:Array, y:Array, direction:str)-> BCOO:
+
+def compute_D_y(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
     if direction == 'forward':
-        return kron(eye(x.shape[0]), compute_forward_derivative(y))
+        return kron(eye(x.shape[0]), compute_forward_derivative(y, ghost_node=ghost_node))
     elif direction == 'backward':
-        return kron(eye(x.shape[0]), compute_backward_derivative(y))
+        return kron(eye(x.shape[0]), compute_backward_derivative(y, ghost_node=ghost_node))
     else:
         raise ValueError("Direction must be 'forward' or 'backward'")
     
@@ -122,15 +122,15 @@ def compute_D_xx(x:Array, y:Array|None=None)-> BCOO:
 def compute_D_yy(x:Array, y:Array)-> BCOO:
     return kron(eye(x.shape[0]), compute_second_derivative(y))
 
-def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str)-> BCOO:
+def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str, ghost_node:bool=False)-> BCOO:
     if direction_x == 'forward' and direction_y == 'forward':
-        return kron(compute_forward_derivative(x), compute_forward_derivative(y))
+        return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
     elif direction_x == 'backward' and direction_y == 'backward':
-        return kron(compute_backward_derivative(x), compute_backward_derivative(y))
+        return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
     elif direction_x == 'forward' and direction_y == 'backward':
-        return kron(compute_forward_derivative(x), compute_backward_derivative(y))
+        return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
     elif direction_x == 'backward' and direction_y == 'forward':
-        return kron(compute_backward_derivative(x), compute_forward_derivative(y))
+        return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
     else:
         raise ValueError("Directions must be 'forward' or 'backward'")
     
