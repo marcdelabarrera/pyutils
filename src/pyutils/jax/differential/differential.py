@@ -345,7 +345,7 @@ def compute_hessian(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)
 #     return BCOO((D_val[:k], jnp.column_stack((D_row[:k], D_col[:k]))), shape=(len(x)*len(y), len(x)*len(y)))
 
 
-def build_D_xy(x, y) -> BCOO:
+def compute_D_xy(x:Array, y:Array) -> BCOO:
     x = jnp.asarray(x); y = jnp.asarray(y)
     nx, ny = int(x.size), int(y.size)
     shape2d = (nx, ny); n = nx * ny
@@ -392,9 +392,7 @@ def build_D_xy(x, y) -> BCOO:
             D_val = D_val.at[k].set( 1.0 / denom); k += 1
 
     idx = jnp.column_stack((D_row[:k], D_col[:k]))
-    mat = BCOO((D_val[:k], idx), shape=(n, n))
-    # Opcional: combina duplicats (pot aparèixer a les vores)
-    # mat = mat.sum_duplicates()
-    return mat
+    D_xy = BCOO((D_val[:k], idx), shape=(n, n))
+    return D_xy
 
 
