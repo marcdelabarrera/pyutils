@@ -72,7 +72,7 @@ def compute_forward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
     at position x[n] = x[n-1] + (x[n-1]-x[n-2]) with f[n] = 0.
     """
     if ghost_node:
-        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), 1/(x[-1]-x[-2]))))
+        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([1/(x[-1]-x[-2])]))))
     else:
         return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([0]))))
 
@@ -87,7 +87,7 @@ def compute_backward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
     at position x[-1] = x[0] - (x[1]-x[0]) with f[-1] = 0.
     """
     if ghost_node:
-        return spdiagm(jnp.concatenate((1/(x[1]-x[0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
+        return spdiagm(jnp.concatenate((jnp.array([1/(x[1]-x[0])]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
     else:
         return spdiagm(jnp.concatenate((jnp.array([0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
 
