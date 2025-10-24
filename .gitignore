@@ -4,3 +4,4 @@
 *.mod
 *.env
 /tests
+*.egg-info
