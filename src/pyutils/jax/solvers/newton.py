@@ -39,7 +39,7 @@ def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"ma
     return x_new, stop, step_size
 
 
-def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False, **kwargs)->NewtonResult:
+def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False,verbose=True, **kwargs)->NewtonResult:
     """
     Looks for f(x)=0 by using Newton's method. Finds x such that jnp.linalg.norm(f(x))<tol.
     """
@@ -53,7 +53,8 @@ def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False, **kw
         f_x = f(x)
         if stop:
             break
-        print(f"it={it}, error = {jnp.linalg.norm(f_x)}, step size = {step_size}", end = "\r")
+        if verbose:
+            print(f"it={it}, error = {jnp.linalg.norm(f_x)}, step size = {step_size}", end = "\r")
         if jnp.linalg.norm(f_x) < tol:
             break
         if jnp.isnan(jnp.linalg.norm(f_x)):
