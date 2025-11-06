@@ -19,7 +19,7 @@ def find_y0(A:Array, B:Array, x0:Array):
     n_1: number of pre-determined variables
     """
     x = x0.reshape(-1,1)
-    n_1 = x0.shape[1]
+    n_1 = x0.shape[0]
     V_inv, Lambda, V = diagonalize(A)
     if jnp.sum(jnp.diag(Lambda.real)<=0)>n_1:
         raise ValueError(f"More stable roots ({jnp.sum(jnp.diag(Lambda.real)<=0)}) than pre-determined variables ({n_1}), infinite solutions")
