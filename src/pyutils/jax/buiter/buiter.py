@@ -1,7 +1,8 @@
 import jax.numpy as jnp
 from jax import Array
+import jax
 from jax.experimental.ode import odeint
-
+from pyutils.jax.solvers import newton_solver
 
 def diagonalize(A:Array)->tuple[Array,Array]:
     vals, V_inv = jnp.linalg.eig(A)
@@ -63,3 +64,13 @@ def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Array:
     t = jnp.arange(0, T, dt)
     sol = odeint(f, jnp.concatenate([x0,y0]).flatten(), t)
     return t, sol
+
+
+def linearize(f:callable, x0)->tuple[Array,Array,Array]:
+    steady_state = newton_solver(f, x0, verbose = False)
+    if not steady_state.success:
+        raise ValueError("Steady state not found")
+    steady_state = steady_state.x.reshape(-1,1)
+    A = jax.jacfwd(f)(steady_state).squeeze()
+    B = -A @ steady_state
+    return A, B, steady_state
