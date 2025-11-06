@@ -24,7 +24,7 @@ def find_y0(A:Array, B:Array, x0:Array):
     if jnp.sum(jnp.diag(Lambda.real)<=0)>n_1:
         raise ValueError(f"More stable roots ({jnp.sum(jnp.diag(Lambda.real)<=0)}) than pre-determined variables ({n_1}), infinite solutions")
     if jnp.sum(jnp.diag(Lambda.real)<=0)<n_1:
-        raise ValueError("Less stable roots than pre-determined variables, no solution")
+        raise ValueError(f"Less stable roots ({jnp.sum(jnp.diag(Lambda.real)<=0)}) than pre-determined variables ({n_1}), no solution")
     
     Lambda_1 = Lambda[:n_1,:n_1]
     Lambda_2 = Lambda[n_1:,n_1:]
