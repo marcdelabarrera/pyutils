@@ -21,6 +21,8 @@ class SolutionNotFoundError(Exception):
 
 def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"max":4,"n":1000}})->Array:
     delta = jnp.linalg.solve(J(x), -f(x))
+    if jnp.all(jnp.isnan(delta)):
+        raise SolutionNotFoundError("Jacobian is singular, cannot find Newton step.")
     step = jnp.logspace(jnp.log10(config["steps"]["max"]), jnp.log10(config["steps"]["min"]), config["steps"]["n"])
     x_new = x.reshape(-1,1) + step * delta.reshape(-1,1)
     candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
