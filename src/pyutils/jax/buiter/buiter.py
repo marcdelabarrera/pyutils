@@ -57,7 +57,7 @@ def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Array:
     n = x0.shape[0]
     sol = jnp.zeros((T,n))
     y0 = find_y0(A, B, x0)
-    def f(x, t):
+    def f(x:Array, t:float):
         x = x.reshape(-1,1)
         return (A @ x + B).flatten()
     t = jnp.arange(0, T, dt)
