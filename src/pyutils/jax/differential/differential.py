@@ -218,7 +218,7 @@ def compute_D_xy(x:Array, y:Array) -> BCOO:
 
 
 
-def build_diff_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
+def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
     """
     Computes the differential matrices for 2D grid defined by vectors x and y.
     """
