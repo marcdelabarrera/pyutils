@@ -2,6 +2,7 @@ from rpy2.robjects.packages import importr
 from rpy2 import robjects as ro
 from dataclasses import dataclass
 import pandas as pd
+from .converters import python_to_r, r_to_python
 
 @dataclass
 class FixestModel:
@@ -10,7 +11,6 @@ class FixestModel:
     def __repr__(self)->str:
         return self.coeftable.__repr__()
     
-
 
 def install_fixest()->None:
     utils = importr('utils')
