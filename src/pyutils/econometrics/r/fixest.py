@@ -19,6 +19,7 @@ def install_fixest()->None:
 
 
 def feols(fml:str, data:pd.DataFrame)->FixestModel:
+    ro.r("library(fixest)")
     ro.globalenv["data"] = python_to_r(data)
     ro.r(f"fitted_model <- feols({fml}, data = data)")
     fitted_model = ro.globalenv['fitted_model']
