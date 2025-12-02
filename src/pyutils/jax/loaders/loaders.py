@@ -48,14 +48,16 @@ def save_pytree(path:Path, pytree:dict, overwrite:bool=False):
 
 
 def load_pytree(path: Path) -> dict:
-    """
-    Loads a pytree saved with save_pytree, converting lists back to jnp.array.
-    """
     with open(path, "r") as f:
         pytree = json.load(f)
 
+    # Convert *every list* (including nested ones) into jnp.array
     def to_array(x):
-        # Lists become jnp.array, everything else stays as is
         return jnp.array(x) if isinstance(x, list) else x
 
-    return jax.tree_util.tree_map(to_array, pytree)
+    # Use tree_map with is_leaf to descend into lists
+    return jax.tree_util.tree_map(
+        to_array,
+        pytree,
+        is_leaf=lambda x: not isinstance(x, dict)
+    )
