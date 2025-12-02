@@ -1,0 +1,48 @@
+
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from scipy import special as sp
+
+def fit_cir(z, dt:float, z_min:float = 0)->tuple:
+    """
+    Fits the model 
+    dz = theta*(z_bar - z) dt+sigma*sqrt(z-z_min)*dW using OLS
+    """
+    if z_min != 0:
+        z = z - z_min
+
+    if z.min() < 0:
+        raise ValueError("x must be non-negative")
+    rs = z[:- 1]  
+    rt = z[1:]
+    model = LinearRegression()
+    y = (rt - rs) / np.sqrt(rs)
+    z1 = dt / np.sqrt(rs)
+    z2 = dt * np.sqrt(rs)
+    X = np.column_stack((z1, z2))
+    model = LinearRegression(fit_intercept=False)
+    model.fit(X, y)
+    y_hat = model.predict(X)
+    residuals = y - y_hat
+    beta_1, beta_2 = model.coef_    
+    theta = -beta_2
+    z_bar = beta_1/theta
+    sigma = np.std(residuals)/np.sqrt(dt)
+    if z_min != 0:
+        z_bar += z_min
+    return theta, z_bar, sigma
+
+
+def gamma_pdf(x, alpha, beta):
+    return (x**(alpha - 1) * np.exp(-x / beta)) / (
+        beta**alpha * sp.gamma(alpha)
+    )
+
+def cir_stationary_distribution(z, theta, sigma, z_bar = 0, z_min = 0):
+    """
+    Analytical pd fof the process
+    dz = theta * (z_bar - z) + sigma*sqrt(z-z_L)*dW
+    """
+    alpha = 2 * theta * (z_bar - z_min) / sigma**2
+    beta = sigma**2 / (2 * theta)
+    return gamma_pdf(z-z_min, alpha, beta)
