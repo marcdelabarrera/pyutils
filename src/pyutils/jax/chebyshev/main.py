@@ -164,3 +164,51 @@ def chebyshev_second_derivative(n):
     T_n_prime_prime[-1] = (-1)**n*(n**4-n**2)/3
     return T_n_prime_prime
 
+
+
+
+
+
+import jax.numpy as jnp
+from jax import Array
+
+def compute_gradient(f:Array, D_x:Array, D_y:Array, indexing: str)->jnp.ndarray:
+    """
+    Compute the gradient of a function f using finite differences.
+    Returns
+    -------
+    nabla_f : jnp.ndarray
+        The gradient of f, with shape (n_x, n_y, 2) if indexing is 'ij'.
+    """
+    if indexing == 'ij':
+        n_x, n_y = f.shape
+        f = f.reshape((-1,1), order='F')
+    else:
+        raise NotImplementedError('Only ij indexing is implemented')
+    
+    f_x = (jnp.kron(jnp.eye(n_y), D_x)@f).reshape((n_x, n_y), order = 'F')
+    f_y = (jnp.kron(D_y, jnp.eye(n_x))@f).reshape((n_x, n_y), order = 'F')
+    nabla_f = jnp.stack([f_x, f_y], axis=-1)
+    return nabla_f 
+
+def compute_hessian(f:jnp.ndarray, D_x:jnp.ndarray, D_y:jnp.ndarray, nabla_f:jnp.ndarray=None, indexing: str='xy')->jnp.ndarray:
+    if nabla_f is None:
+        nabla_f = compute_gradient(f, D_x, D_y, indexing)
+        
+    if indexing == 'ij':
+        n_x, n_y = f.shape
+        f_x, f_y = nabla_f[:,:,0], nabla_f[:,:,1]
+        f = f.reshape((-1,1), order='F')
+        f_x = f_x.reshape((-1,1), order='F')
+        f_y = f_y.reshape((-1,1), order='F')
+    else:
+        raise NotImplementedError('Only ij indexing is implemented')
+    f_xx = (jnp.kron(jnp.eye(n_y), D_x)@f_x).reshape((n_x, n_y), order = 'F')
+    f_yy = (jnp.kron(D_y, jnp.eye(n_x))@f_y).reshape((n_x, n_y), order = 'F')
+    f_xy = (jnp.kron(D_y, D_x)@f).reshape((n_x, n_y), order = 'F')
+    Hf = jnp.stack([
+        jnp.stack([f_xx, f_xy], axis=-1),
+        jnp.stack([f_xy, f_yy], axis=-1)
+    ], axis=-2)
+    return Hf
+
