@@ -3,6 +3,7 @@
 import warnings
 import platform
 import sys
+from pathlib import Path
 # Third party imports
 import pandas as pd
 from pandas import DataFrame, Series
@@ -14,8 +15,9 @@ from statsmodels.tsa import filters
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 # Local imports
 sys.path.append('/bbkinghome/mbarrera/git_supply')
-from utils.econometrics.utils import lagmat, add_const
+#from utils.econometrics.utils import lagmat, add_const
 
+PATH = Path(__file__).parent
 
 
 def growth_to_levels(x:pd.Series):
@@ -32,7 +34,7 @@ def growth_to_levels(x:pd.Series):
 
 
 def hamilton_filter(x:pd.Series, p:int=4, h:int=8, dropna = False)->pd.Series:
-    '''
+    r'''
     Runs the regression y_{t+h} = \alpha + \beta_1 y_{t} + \beta_2 y_{t-1} + ... + \beta_p y_{t-p+1} + \epsilon_{t+h}
     and returns \epsilon_{t+1}
     '''
@@ -56,9 +58,9 @@ def seasonally_adjust_series(x:Series, **kwargs)->Series:
     Seasonally adjusts a series using X13-ARIMA-SEATS
     '''
     if platform.system() == 'Linux':
-        x12path = '/bbkinghome/mbarrera/git_supply/utils/econometrics/x13arima/linux/x13as_ascii-v1-1-b60/x13as'
+        x12path = PATH / 'x13arima/linux/x13as_ascii-v1-1-b60/x13as'
     elif platform.system() == 'Windows':
-        x12path = '/bbking2.mit.edu/mbarrera/git_supply/utils/econometrics/x13arima/x13as_ascii-v1-1-b60/x13as'
+        x12path = PATH / 'x13arima/windows/x13as_ascii-v1-1-b60/x13as'
     if x.isna().any():
         raise ValueError('Series contains NaNs')
     return x13_arima_analysis(x, x12path=x12path, **kwargs).seasadj 
