@@ -46,7 +46,7 @@ def fit_cir(z, dt:float, z_min:float = 0)->CIRModel:
     sigma = np.std(residuals)/np.sqrt(dt)
     if z_min != 0:
         z_bar += z_min
-    return CIRModel(theta=theta.items(), z_bar=z_bar.items(), sigma=sigma.items(), z_min=z_min.items())
+    return CIRModel(theta=theta.item(), z_bar=z_bar.item(), sigma=sigma.item(), z_min=z_min.item())
 
 
 def gamma_pdf(x, alpha, beta):
