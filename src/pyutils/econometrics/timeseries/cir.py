@@ -16,6 +16,8 @@ class CIRModel:
     sigma: float
     z_min: float = 0.0
 
+    def stationary_distribution(self, z:np.ndarray)->np.ndarray:
+        return cir_stationary_distribution(z, self.theta, self.sigma, self.z_bar, self.z_min)
 
 def fit_cir(z, dt:float, z_min:float = 0)->CIRModel:
     """
@@ -44,7 +46,7 @@ def fit_cir(z, dt:float, z_min:float = 0)->CIRModel:
     sigma = np.std(residuals)/np.sqrt(dt)
     if z_min != 0:
         z_bar += z_min
-    return CIRModel(theta=theta, z_bar=z_bar, sigma=sigma, z_min=z_min)
+    return CIRModel(theta=theta.items(), z_bar=z_bar.items(), sigma=sigma.items(), z_min=z_min.items())
 
 
 def gamma_pdf(x, alpha, beta):
