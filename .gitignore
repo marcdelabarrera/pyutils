@@ -3,3 +3,5 @@
 *.pdf
 *.mod
 *.env
+/tests
+*.egg-info

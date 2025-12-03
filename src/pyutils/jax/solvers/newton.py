@@ -19,23 +19,31 @@ class SolutionNotFoundError(Exception):
     pass
 
 
-def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"max":4,"n":1000}})->jnp.ndarray:
+def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"max":4,"n":1000}})->Array:
     delta = jnp.linalg.solve(J(x), -f(x))
+    if jnp.all(jnp.isnan(delta)):
+        raise SolutionNotFoundError("Jacobian is singular, cannot find Newton step.")
     step = jnp.logspace(jnp.log10(config["steps"]["max"]), jnp.log10(config["steps"]["min"]), config["steps"]["n"])
     x_new = x.reshape(-1,1) + step * delta.reshape(-1,1)
     candidates = jnp.linalg.norm(jax.vmap(f, in_axes=1)(x_new), axis=1)
+    if jnp.any(jnp.isnan(candidates)):
+        candidates = jnp.where(jnp.isnan(candidates), jnp.inf, candidates)
+        warnings.warn("NaN encountered in line search candidates, ignoring those candidates.")
+    elif jnp.all(jnp.isnan(candidates)):
+        raise SolutionNotFoundError("All candidates in line search are NaN.")
     x_new = x_new[:,jnp.argmin(candidates)]
+    step_size = step[jnp.argmin(candidates)]
     if jnp.linalg.norm(f(x_new)) > jnp.linalg.norm(f(x)):
         warnings.warn(f"Line search failed: no acceptable step size found and error is {jnp.linalg.norm(f(x))}")
         stop = True
     else:
         stop = False
-    return x_new, stop
+    return x_new, stop, step_size
 
 
-def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False, **kwargs)->NewtonResult:
+def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False,verbose=True, **kwargs)->NewtonResult:
     """
-    Looks for f(x)=0 by using Netwont's method. Finds x such that jnp.linalg.norm(f(x))<tol.
+    Looks for f(x)=0 by using Newton's method. Finds x such that jnp.linalg.norm(f(x))<tol.
     """
     if not jax.config.read("jax_enable_x64"):
         warnings.warn("JAX is not configured to use 64-bit precision. This may lead to numerical instability in Newton's method. Consider setting jax_enable_x64=True in your JAX configuration.")
@@ -43,11 +51,12 @@ def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False, **kw
     x = x0
     J = jax.jacfwd(f, has_aux = has_aux)
     for it in range(maxit):
-        x, stop = newton_step(f,J, x, **kwargs)
+        x, stop, step_size = newton_step(f,J, x, **kwargs)
         f_x = f(x)
         if stop:
             break
-        print(f"it={it}, error = {jnp.linalg.norm(f_x)}", end = "\r")
+        if verbose:
+            print(f"it={it}, error = {jnp.linalg.norm(f_x)}, step size = {step_size}", end = "\r")
         if jnp.linalg.norm(f_x) < tol:
             break
         if jnp.isnan(jnp.linalg.norm(f_x)):

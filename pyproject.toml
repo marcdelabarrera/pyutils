@@ -7,7 +7,8 @@ name = "pyutils"
 version = "0.1.0"
 description = "Python utilities"
 authors = [{ name = "Marc de la Barrera" }]
-dependencies = []
+requires-python = ">=3.11"
+dependencies = ["jax (>=0.7.1,<0.8.0)", "matplotlib (>=3.10.6,<4.0.0)", "rpy2 (>=3.6.4,<4.0.0)", "pandas (>=2.3.3,<3.0.0)"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

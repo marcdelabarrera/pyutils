@@ -1,11 +1,25 @@
 
+from dataclasses import dataclass
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from scipy import special as sp
 
-def fit_cir(z, dt:float, z_min:float = 0)->tuple:
+
+@dataclass
+class CIRModel:
     """
-    Fits the model 
+    Cox-Ingersoll-Ross model parameters
+    dz = theta*(z_bar - z) dt+sigma*sqrt(z-z_min)*
+    """
+    theta: float
+    z_bar: float
+    sigma: float
+    z_min: float = 0.0
+
+
+def fit_cir(z, dt:float, z_min:float = 0)->CIRModel:
+    """
+    Fits a Cox-Ingersoll-Ross model
     dz = theta*(z_bar - z) dt+sigma*sqrt(z-z_min)*dW using OLS
     """
     if z_min != 0:
@@ -30,7 +44,7 @@ def fit_cir(z, dt:float, z_min:float = 0)->tuple:
     sigma = np.std(residuals)/np.sqrt(dt)
     if z_min != 0:
         z_bar += z_min
-    return theta, z_bar, sigma
+    return CIRModel(theta=theta, z_bar=z_bar, sigma=sigma, z_min=z_min)
 
 
 def gamma_pdf(x, alpha, beta):
