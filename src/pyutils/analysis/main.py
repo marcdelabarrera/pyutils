@@ -149,3 +149,14 @@ def _percentile_bin(x:pd.Series,
         bins = bins.cat.set_categories(all_labels, ordered = True)
     
     return bins
+
+
+
+def drop_duplicates(df:pd.DataFrame, verbose:bool=False, subset:list[str]=None)->pd.DataFrame:
+    if verbose:
+        initial_len = len(df)
+        print("Before dropping duplicates:", len(df))
+    df = df.drop_duplicates(subset=subset)
+    if verbose:
+        print("After dropping duplicates:", len(df), f"({len(df)/initial_len:.2%} of initial)")
+    return df
