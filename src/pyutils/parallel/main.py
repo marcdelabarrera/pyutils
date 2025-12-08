@@ -3,9 +3,9 @@ import concurrent.futures
 from functools import partial
 
 def map(fn:callable, arg:list, max_workers:int = 1, **kwargs)-> list:
-    """
-    
-    """
+    '''
+    Executes map in parallel.
+    '''
     if max_workers == 1:
         return [fn(i, **kwargs) for i in arg]
     else:

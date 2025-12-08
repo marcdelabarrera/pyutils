@@ -348,3 +348,164 @@ def growth_rate_by(data:pd.DataFrame|pd.Series,
             return (data.groupby(by, group_keys=False).apply(lambda x: np.log(x)-np.log(x).shift(h)))
     else:
         raise ValueError("not implemented for pandas dataframe")
+    
+
+
+
+
+from functools import reduce
+import warnings
+
+import numpy as np
+import pandas as pd
+
+
+
+def compute_growth_by(df:pd.DataFrame, var:str, id:list, t:str, freq:str, k:int=1)->pd.Series:
+     '''
+     Computse growth of variable var_growth_t+k = log(x_t+k) - log(x_t) or var_growth_t-k = log(x_t)-log(x_t-k) depending on the sign of k 
+     '''
+     
+     if not is_continuous(df, id = id,t=t,freq=freq):
+        raise ValueError(f'data provided is not continuous by {id} at frequency {freq}')
+
+     id = [id] if isinstance(id, str) else id
+
+     out = (df.groupby(id, group_keys=False)[var]
+                .apply(lambda x: np.log(x.shift(-k))-np.log(x))).rename(f'{var}_growth_t{+k:+}')
+     out = -out if k<0 else out
+     out.index =  df.reset_index().set_index(id+[t]).index
+     return out
+
+
+def index_to_year(df:pd.DataFrame, t:str='date')->pd.DataFrame:
+    '''
+    Given a index t that is a datetime, substitute it for year.
+    '''
+    df['year'] = df.index.get_level_values(t).year
+    new_index = [i if i!=t else 'year' for i in df.index.names]
+    df = df.reset_index(t,drop=True)
+    return df.reset_index().set_index(new_index)
+
+
+def resample_panel(data:pd.DataFrame, id:list[str], freq:str)->pd.DataFrame:
+    '''
+    Resamples an indexed dataframe
+    '''
+    if data.index.has_duplicates:
+        raise ValueError('Index has duplicates')
+    return data.groupby(id, group_keys=True).apply(lambda x: x.reset_index(id, drop=True).resample(freq).asfreq())
+
+
+
+
+def _is_continuous(x:pd.Series, freq:str)->bool:
+    '''
+    Checks if a series is contnuous at the montly or yearly level
+    '''
+    if freq not in ['M','Y']:
+        raise ValueError('Implemented frequencies are M and Y')
+
+    if freq=='M':
+        return (x==x.shift()+pd.DateOffset(months=1)).iloc[1:].all()
+
+    if freq=='Y':
+        if pd.api.types.is_integer_dtype(x):
+            return (x==x.shift()+1).iloc[1:].all()
+        elif pd.api.types.is_datetime64_any_dtype(x):
+            return (x==x.shift()+pd.DateOffset(years=1)).iloc[1:].all()
+
+def is_continuous(data:pd.DataFrame, id:list[str], t:str, freq:str)->bool:
+    if data.index.has_duplicates:
+        raise ValueError('Index has duplicates')
+
+    return data.reset_index().groupby(id)[t].apply(lambda x: _is_continuous(x,freq)).all()
+
+class NonContinuousError(Exception):
+    def __init__(self, message='data is not continuous'):
+          super().__init__(message)
+
+
+def check_continuous(data:pd.DataFrame, id:list[str], t:str, freq:str)->None:
+    """
+    Checks if a dataset is continuous. Returns none if it is, and raises an error if it is not.
+    """
+    if is_continuous(data, id, t, freq):
+         return None
+    else:
+         raise NonContinuousError()
+
+
+
+
+
+
+
+def is_balanced(df:pd.DataFrame, id:list[str])->bool:
+    obs_per_id = df.groupby(id).size()
+    return all(obs_per_id==obs_per_id.max())
+
+def balance_panel(df:pd.DataFrame, id:list[str], verbose=False)->pd.DataFrame:
+    '''
+    Ensures that a panel has the same number of observations by id, droping unbalanced terms.
+    #TODO: make it more general. 
+    Parameters:
+    -----------
+    df: pd.DataFrame
+        Indexed dataframe, index must be id, time.
+    '''
+    if isinstance(id, list):
+        raise NotImplementedError('Only works for one level id')
+    if id != df.index.names[0]:
+        raise ValueError('id must be indexed first')
+    obs_per_id = df.groupby(id).size()
+    if verbose:
+        id_dropped = (obs_per_id != obs_per_id.max()).sum()
+        print(f'{id_dropped} of {id} ({100*id_dropped/obs_per_id.size:.1f}%) dropped')
+    balanced_id = obs_per_id.index[obs_per_id == obs_per_id.max()]
+    return df.loc[balanced_id]
+
+
+
+def balance_panel(df, id:list[str], t:str, freq:str=None):
+    """
+    Completes a panel.
+    """
+    #warnings.warn("balance panel has changed")
+    id = [id] if isinstance(id, str) else id
+    index = df.index.names
+    df = df.reset_index()
+    if True:
+        t_range = pd.Series(range(df[t].min(), df[t].max()+1), name=t)
+    else:
+        t_range = pd.date_range(df[t].min(), df[t].max(), freq=freq, name=t)
+
+    out =  pd.merge(df[id].drop_duplicates(),
+                    t_range, how='cross')
+    out = pd.merge(out, df, on = id+[t], how='left')
+    return out.set_index(index)
+
+def interpolate_by(df, id:list[str], **kwargs):
+    return df.groupby(id,group_keys=False).apply(lambda x: x.interpolate(**kwargs))
+
+
+
+def constant_column_by(df:pd.DataFrame, column:list[str], id:list[str],verbose=False)->pd.Series:
+    '''
+    Ensures a column is constant within id.
+    Returns:
+    --------
+    pd.Series
+
+    '''
+    if isinstance(column, list):
+        id_list = [constant_column_by(df, i, id, verbose) for i in column]
+        return reduce(lambda x,y: x.intersection(y), id_list)
+
+    constant_column = df.groupby(id)[column].nunique(dropna=False).eq(1)
+
+    if verbose:
+        print(f'{constant_column.mean()*100:.1f} % of {id} have a constant value for {column}')
+    return constant_column.index[constant_column]
+
+  
