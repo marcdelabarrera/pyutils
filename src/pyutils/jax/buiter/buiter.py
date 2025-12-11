@@ -3,8 +3,9 @@ from jax import Array
 import jax
 from jax.experimental.ode import odeint
 from pyutils.jax.solvers import newton_solver
+from typing import Callable, Tuple 
 
-def diagonalize(A:Array)->tuple[Array,Array]:
+def diagonalize(A:Array)->Tuple[Array,Array,Array]:
     vals, V_inv = jnp.linalg.eig(A)
     idx = jnp.argsort(jnp.real(vals))
     vals = vals[idx]
@@ -50,7 +51,7 @@ def find_y0(A:Array, B:Array, x0:Array):
     y0 = y0.real
     return y0
 
-def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Array:
+def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Tuple[Array,Array]:
     """
     Simulate the system given initial state x0 and time horizon T
     [dot x; dot y] = A [x; y] + B
@@ -66,10 +67,10 @@ def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Array:
     return t, sol
 
 
-def linearize(f:callable, x0:Array)->tuple[Array,Array,Array]:
+def linearize(f:Callable, x0:Array)->Tuple[Array,Array,Array]:
 
     if jnp.max(jnp.abs(f(x0)))<1e-8:
-        pass
+        steady_state = x0.reshape(-1,1)
     else:
         steady_state = newton_solver(f, x0, verbose = False)
         if not steady_state.success:

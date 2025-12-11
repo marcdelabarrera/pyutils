@@ -1096,6 +1096,21 @@ files = [
 diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
+name = "pystata"
+version = "0.0.1"
+description = "Access Stata within python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pystata-0.0.1-py3-none-any.whl", hash = "sha256:69da499fb9a11a60fbfb657abf932b7f9981a7b01949e551172aec96f0b735d0"},
+    {file = "pystata-0.0.1.tar.gz", hash = "sha256:cb1b138d84399f7260323f2b969a3137cf9d56f051073c889b8210f3ad28b81e"},
+]
+
+[package.dependencies]
+pandas = "*"
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
@@ -1390,4 +1405,4 @@ devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "77262c9a00a429ffcd5031f1b1c452383e6d943f2d93692554a62b69c02c5236"
+content-hash = "9dc8cdb9ed494ce6e23de5dd0d22655b4e889328e2462cbf8a7891cd0677636a"
