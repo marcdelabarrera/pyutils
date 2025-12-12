@@ -21,3 +21,4 @@ def reghdfe(depvar:str, exog:list[str], absorb:str, vce:str, data:pd.DataFrame):
     stata.pdataframe_to_data(data, force=True)
     stata.run(f'reghdfe {depvar} {" ".join(exog)}, absorb({absorb}) vce({vce})')
     return stata.get_ereturn()
+

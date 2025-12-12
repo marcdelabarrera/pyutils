@@ -51,7 +51,7 @@ def find_y0(A:Array, B:Array, x0:Array):
     y0 = y0.real
     return y0
 
-def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Tuple[Array,Array]:
+def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01,**kwargs)->Tuple[Array,Array]:
     """
     Simulate the system given initial state x0 and time horizon T
     [dot x; dot y] = A [x; y] + B
@@ -63,7 +63,7 @@ def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01)->Tuple[Array,
         x = x.reshape(-1,1)
         return (A @ x + B).flatten()
     t = jnp.arange(0, T, dt)
-    sol = odeint(f, jnp.concatenate([x0,y0]).flatten(), t)
+    sol = odeint(f, jnp.concatenate([x0,y0]).flatten(), t, **kwargs)
     return t, sol
 
 
