@@ -15,7 +15,7 @@ def diagonalize(A:Array)->Tuple[Array,Array,Array]:
     return V_inv, Lambda, V
 
 
-def find_y0(A:Array, B:Array, x0:Array):
+def find_y0(A:Array, B:Array, x0:Array)->Array:
     """
     n_1: number of pre-determined variables
     """
@@ -49,13 +49,14 @@ def find_y0(A:Array, B:Array, x0:Array):
     if jnp.any(jnp.abs(y0.imag)>1e-6):
         raise ValueError(f"y0 = {y0} has imaginary numbers")
     y0 = y0.real
-    return y0
+    return y0.flatten()
 
 def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01,**kwargs)->Tuple[Array,Array]:
     """
     Simulate the system given initial state x0 and time horizon T
     [dot x; dot y] = A [x; y] + B
     """
+    x0 = x0.flatten()
     n = x0.shape[0]
     sol = jnp.zeros((T,n))
     y0 = find_y0(A, B, x0)
@@ -63,7 +64,7 @@ def simulate(A:Array, B:Array, x0:Array, T:int=1, dt:float = 0.01,**kwargs)->Tup
         x = x.reshape(-1,1)
         return (A @ x + B).flatten()
     t = jnp.arange(0, T, dt)
-    sol = odeint(f, jnp.concatenate([x0,y0]).flatten(), t, **kwargs)
+    sol = odeint(f, jnp.concatenate([x0,y0]), t, **kwargs)
     return t, sol
 
 
