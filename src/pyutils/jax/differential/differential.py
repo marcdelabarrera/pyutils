@@ -4,8 +4,8 @@ import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 
 
-def vvmap(fun, in_axes):
-    return jax.vmap(jax.vmap(fun, in_axes = in_axes), in_axes = in_axes)
+def vvmap(fun, in_axes:int=0, out_axes:int=0):
+    return jax.vmap(jax.vmap(fun, in_axes = in_axes, out_axes = out_axes), in_axes = in_axes, out_axes = out_axes)
 
 def compute_vec_index(index:tuple, shape:tuple, order = "C")-> int:
     if jnp.any(jnp.array(index) >= jnp.array(shape)):
