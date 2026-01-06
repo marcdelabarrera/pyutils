@@ -54,7 +54,7 @@ def gamma_pdf(x, alpha, beta):
         beta**alpha * sp.gamma(alpha)
     )
 
-def cir_stationary_distribution(z, theta, sigma, z_bar = 0, z_min = 0):
+def cir_stationary_distribution(z, theta, sigma, z_bar:float = 0., z_min:float = 0.):
     """
     Analytical pd fof the process
     dz = theta * (z_bar - z) + sigma*sqrt(z-z_L)*dW

@@ -387,6 +387,17 @@ def index_to_year(df:pd.DataFrame, t:str='date')->pd.DataFrame:
     df = df.reset_index(t,drop=True)
     return df.reset_index().set_index(new_index)
 
+def index_to_column(x:pd.Series|pd.DataFrame)->pd.DataFrame:
+    """
+    Given a series or dataframe with a single index, converts the outer index to columns.
+    """
+    if isinstance(x, pd.DataFrame):    
+        if len(x.columns)>1:
+            raise ValueError('x has more than one column')
+        else:
+            x = x.iloc[:,0]
+
+    return x.reset_index(0).pivot(columns = x.index.names[0], values = x.name)
 
 def resample_panel(data:pd.DataFrame, id:list[str], freq:str)->pd.DataFrame:
     '''
