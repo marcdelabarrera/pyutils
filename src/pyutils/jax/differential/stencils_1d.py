@@ -1,3 +1,4 @@
+import jax
 from jax import Array
 import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
@@ -40,3 +41,20 @@ def compute_second_derivative(x:Array) -> BCOO:
     dx = jnp.diff(x)
     dx2 = jnp.concatenate((dx[:1],dx))*jnp.concatenate((dx,dx[-1:]))
     return spdiagm(1/dx2[:-1], k=1) + spdiagm(1/dx2[1:], k=-1) - spdiagm(jnp.full(n,2).at[0].set(1).at[-1].set(1)/dx2)
+
+
+
+@jax.jit
+def compute_interpolation_weights(x:float|Array, grid:Array)->Array:
+    """
+    Given a grid and a value x, returns a row vector with the linear interpolation weights
+    for the two grid points surrounding x.
+    """
+    x = jnp.clip(x, grid[0], grid[-1])
+    row = jnp.zeros(grid.shape)
+    ix = jnp.searchsorted(grid, x)
+    weights = (grid[ix]-x)/(grid[ix]-grid[ix-1]), (x - grid[ix-1])/(grid[ix]-grid[ix-1])
+    row = row.at[ix-1].set(weights[0])
+    row = row.at[ix].set(weights[1])
+    row = jnp.where(row <= 0, 0.0, row)
+    return row
