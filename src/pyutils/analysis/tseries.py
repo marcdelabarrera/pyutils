@@ -21,7 +21,7 @@ PATH = Path(__file__).parent
 
 
 def growth_to_levels(x:pd.Series):
-    growth = 1+x.values
+    growth = x.values + 1.
     levels = np.zeros_like(growth)
     levels[0] = growth[0]**(1/4)
     levels[1] = growth[1]**(1/2)
