@@ -169,7 +169,7 @@ def compute_interpolation_weights_2d(x, y, grid_x: Array, grid_y: Array):
     iy_grid = jnp.array([iy_indices[0], iy_indices[1], iy_indices[0], iy_indices[1]])
     
     # Flatten 2D indices to 1D
-    indices = jnp.ravel_multi_index((ix_grid, iy_grid), (len(grid_x), len(grid_y)))
+    indices = jnp.ravel_multi_index((ix_grid, iy_grid), (len(grid_x), len(grid_y)), mode="clip")
     
     # Combine weights using outer product structure
     weights = jnp.array([
