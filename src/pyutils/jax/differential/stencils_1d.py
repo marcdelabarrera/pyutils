@@ -44,17 +44,53 @@ def compute_second_derivative(x:Array) -> BCOO:
 
 
 
+
 @jax.jit
-def compute_interpolation_weights(x:float|Array, grid:Array)->Array:
+def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array, Array, Array]:
     """
-    Given a grid and a value x, returns a row vector with the linear interpolation weights
-    for the two grid points surrounding x.
+    Given a grid and a scalar value x, returns the interpolation indices and weights
+    for linear interpolation between the two grid points surrounding x.
+
+    Args:
+        x: Scalar value to interpolate (will be clipped to grid bounds)
+        grid: 1D array of grid points (must be sorted)
+
+    Returns:
+        Tuple of (indices, grid_values, weights) where:
+        - indices: Array of shape (2,) with left and right indices
+        - grid_values: Array of shape (2,) with corresponding grid values
+        - weights: Array of shape (2,) with interpolation weights summing to 1
     """
     x = jnp.clip(x, grid[0], grid[-1])
-    row = jnp.zeros(grid.shape)
     ix = jnp.searchsorted(grid, x)
-    weights = (grid[ix]-x)/(grid[ix]-grid[ix-1]), (x - grid[ix-1])/(grid[ix]-grid[ix-1])
-    row = row.at[ix-1].set(weights[0])
-    row = row.at[ix].set(weights[1])
-    row = jnp.where(row <= 0, 0.0, row)
+    w_left = jnp.clip((grid[ix] - x) / (grid[ix] - grid[ix-1]), 0, 1)
+    w_right = 1 - w_left
+
+    indices = jnp.array([ix-1, ix])
+    grid_values = jnp.array([grid[ix-1], grid[ix]])
+    weights = jnp.array([w_left, w_right])
+
+    return indices, grid_values, weights
+
+@jax.jit
+def compute_interpolation_weights_dense(x: float | Array, grid: Array) -> Array:
+    """
+    Given a grid and a scalar value x, returns a dense row vector of interpolation weights.
+
+    Args:
+        x: Scalar value to interpolate (will be clipped to grid bounds)
+        grid: 1D array of grid points (must be sorted)
+
+    Returns:
+        Array of shape (n,) where n = len(grid), with weights at the two relevant
+        indices such that grid @ weights approximates x via linear interpolation.
+    """
+    x = jnp.clip(x, grid[0], grid[-1])
+    ix = jnp.searchsorted(grid, x)
+    w_left = jnp.clip((grid[ix] - x) / (grid[ix] - grid[ix-1]), 0, 1)
+    w_right = 1 - w_left
+
+    row = jnp.zeros_like(grid)
+    row = row.at[ix-1].set(w_left)
+    row = row.at[ix].set(w_right)
     return row
