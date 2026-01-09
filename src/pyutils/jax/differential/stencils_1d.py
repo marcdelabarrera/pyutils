@@ -86,7 +86,7 @@ def compute_second_derivative(x:Array) -> BCOO:
 
 
 @jax.jit
-def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array, Array, Array]:
+def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array, Array]:
     """
     Given a grid and a scalar value x, returns the interpolation indices and weights
     for linear interpolation between the two grid points surrounding x.
@@ -96,9 +96,8 @@ def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array,
         grid: 1D array of grid points (must be sorted)
 
     Returns:
-        Tuple of (indices, grid_values, weights) where:
+        Tuple of (indices, weights) where:
         - indices: Array of shape (2,) with left and right indices
-        - grid_values: Array of shape (2,) with corresponding grid values
         - weights: Array of shape (2,) with interpolation weights summing to 1
     """
     x = jnp.clip(x, grid[0], grid[-1])
@@ -107,10 +106,9 @@ def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array,
     w_right = 1 - w_left
 
     indices = jnp.array([ix-1, ix])
-    grid_values = jnp.array([grid[ix-1], grid[ix]])
     weights = jnp.array([w_left, w_right])
 
-    return indices, grid_values, weights
+    return indices, weights
 
 @jax.jit
 def compute_interpolation_weights_dense(x: float | Array, grid: Array) -> Array:
