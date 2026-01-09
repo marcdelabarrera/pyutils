@@ -37,10 +37,50 @@ def compute_backward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
     
 
 def compute_second_derivative(x:Array) -> BCOO:
-    n = x.shape[0]
-    dx = jnp.diff(x)
-    dx2 = jnp.concatenate((dx[:1],dx))*jnp.concatenate((dx,dx[-1:]))
-    return spdiagm(1/dx2[:-1], k=1) + spdiagm(1/dx2[1:], k=-1) - spdiagm(jnp.full(n,2).at[0].set(1).at[-1].set(1)/dx2)
+    """
+    Computes the matrix D2 such that D2@f = d2f/dx2 using centered differences.
+    For interior points i (1 <= i <= n-2), uses the 3-point stencil:
+
+    d2f_i/dx2 = 2 * [f_{i-1}/(h_L*(h_L+h_R)) - f_i/(h_L*h_R) + f_{i+1}/(h_R*(h_L+h_R))]
+
+    where h_L = x_i - x_{i-1} and h_R = x_{i+1} - x_i.
+
+    Boundary points use one-sided stencils.
+    """
+    dx = jnp.diff(x)  # dx[i] = x[i+1] - x[i], shape (n-1,)
+
+    # For interior points, compute the correct coefficients
+    # h_L[i] = dx[i-1], h_R[i] = dx[i]
+    h_L = dx[:-1]  # shape (n-2,), corresponds to points i=1,...,n-2
+    h_R = dx[1:]   # shape (n-2,), corresponds to points i=1,...,n-2
+
+    # Coefficients for the centered 3-point stencil (interior points)
+    # Multiply by 2 for the standard second derivative formula
+    coef_left = 2.0 / (h_L * (h_L + h_R))      # coefficient for f_{i-1}
+    coef_center = -2.0 / (h_L * h_R)            # coefficient for f_i
+    coef_right = 2.0 / (h_R * (h_L + h_R))      # coefficient for f_{i+1}
+
+    # Build diagonal coefficients for the full matrix
+    # Main diagonal: [boundary_left, coef_center[0], ..., coef_center[-1], boundary_right]
+    diag_main = jnp.concatenate([
+        jnp.array([-1.0 / dx[0]]),  # boundary at i=0
+        coef_center,
+        jnp.array([-1.0 / dx[-1]])  # boundary at i=n-1
+    ])
+
+    # Upper diagonal (k=1): [boundary_left, coef_right[0], ..., coef_right[-1]]
+    diag_upper = jnp.concatenate([
+        jnp.array([1.0 / dx[0]]),   # boundary at i=0
+        coef_right
+    ])
+
+    # Lower diagonal (k=-1): [coef_left[0], ..., coef_left[-1], boundary_right]
+    diag_lower = jnp.concatenate([
+        coef_left,
+        jnp.array([1.0 / dx[-1]])   # boundary at i=n-1
+    ])
+
+    return spdiagm(diag_upper, k=1) + spdiagm(diag_lower, k=-1) + spdiagm(diag_main, k=0)
 
 
 
