@@ -85,6 +85,7 @@ def compute_second_derivative(x:Array) -> BCOO:
 
 
 
+
 @jax.jit
 def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array, Array]:
     """
@@ -101,11 +102,18 @@ def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array,
         - weights: Array of shape (2,) with interpolation weights summing to 1
     """
     x = jnp.clip(x, grid[0], grid[-1])
-    ix = jnp.searchsorted(grid, x)
-    w_left = jnp.clip((grid[ix] - x) / (grid[ix] - grid[ix-1]), 0, 1)
-    w_right = 1 - w_left
+    ix = jnp.searchsorted(grid, x, side='right')
+    ix = jnp.clip(ix, 1, len(grid) - 1)  # Ensure ix is in [1, n-1] to avoid negative indices
 
-    indices = jnp.array([ix-1, ix])
+    ix_left = ix - 1
+    ix_right = ix
+
+    # Linear interpolation weights
+    dx = grid[ix_right] - grid[ix_left]
+    w_right = jnp.where(dx > 0, (x - grid[ix_left]) / dx, 1.0)
+    w_left = 1.0 - w_right
+
+    indices = jnp.array([ix_left, ix_right])
     weights = jnp.array([w_left, w_right])
 
     return indices, weights
@@ -124,11 +132,51 @@ def compute_interpolation_weights_dense(x: float | Array, grid: Array) -> Array:
         indices such that grid @ weights approximates x via linear interpolation.
     """
     x = jnp.clip(x, grid[0], grid[-1])
-    ix = jnp.searchsorted(grid, x)
-    w_left = jnp.clip((grid[ix] - x) / (grid[ix] - grid[ix-1]), 0, 1)
-    w_right = 1 - w_left
+    ix = jnp.searchsorted(grid, x, side='right')
+    ix = jnp.clip(ix, 1, len(grid) - 1)  # Ensure ix is in [1, n-1] to avoid negative indices
+
+    ix_left = ix - 1
+    ix_right = ix
+
+    # Linear interpolation weights
+    dx = grid[ix_right] - grid[ix_left]
+    w_right = jnp.where(dx > 0, (x - grid[ix_left]) / dx, 1.0)
+    w_left = 1.0 - w_right
 
     row = jnp.zeros_like(grid)
-    row = row.at[ix-1].set(w_left)
-    row = row.at[ix].set(w_right)
+    row = row.at[ix_left].set(w_left)
+    row = row.at[ix_right].set(w_right)
     return row
+
+
+def compute_interpolation_weights_2d(x, y, grid_x: Array, grid_y: Array):
+    """
+    Compute 2D bilinear interpolation weights using 1D interpolation.
+    
+    Returns:
+        indices: Array of flat indices (length 4) for the surrounding grid points
+        weights: Array of weights (length 4) that sum to 1
+    
+    Grid flattening: uses ravel_multi_index with C-order
+    """
+    # Get 1D interpolation for each dimension
+    ix_indices, ix_weights = compute_interpolation_weights(x, grid_x)
+    iy_indices, iy_weights = compute_interpolation_weights(y, grid_y)
+    
+    # Combine into 2D: we have 2x2 = 4 points
+    # Create all combinations of (ix, iy) pairs
+    ix_grid = jnp.array([ix_indices[0], ix_indices[0], ix_indices[1], ix_indices[1]])
+    iy_grid = jnp.array([iy_indices[0], iy_indices[1], iy_indices[0], iy_indices[1]])
+    
+    # Flatten 2D indices to 1D
+    indices = jnp.ravel_multi_index((ix_grid, iy_grid), (len(grid_x), len(grid_y)))
+    
+    # Combine weights using outer product structure
+    weights = jnp.array([
+        ix_weights[0] * iy_weights[0],
+        ix_weights[0] * iy_weights[1],
+        ix_weights[1] * iy_weights[0],
+        ix_weights[1] * iy_weights[1]
+    ])
+    
+    return indices, weights
