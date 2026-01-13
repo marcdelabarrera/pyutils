@@ -1,10 +1,10 @@
 import pandas as pd
-from pystata import stata
+from pystata import stata # type: ignore
 
-def ivreg(reg:str, data:pd.DataFrame):
-    stata.pdataframe_to_data(data, force=True)
-    stata.run(reg)
-    return  stata.get_ereturn()
+# def ivreg(reg:str, data:pd.DataFrame):
+#     stata.pdataframe_to_data(data, force=True)
+#     stata.run(reg)
+#     return  stata.get_ereturn()
 
 
 def ivreg(estimator:str, depvar:str, exog:list[str], endog:str, instruments:list[str], data:pd.DataFrame):
@@ -22,3 +22,7 @@ def reghdfe(depvar:str, exog:list[str], absorb:str, vce:str, data:pd.DataFrame):
     stata.run(f'reghdfe {depvar} {" ".join(exog)}, absorb({absorb}) vce({vce})')
     return stata.get_ereturn()
 
+def install_reghdf():
+    stata.run('ssc install require, replace')
+    stata.run('ssc install ftools, replace')
+    stata.run('ssc install reghdfe, replace')
