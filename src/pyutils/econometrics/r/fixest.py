@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 from rpy2.robjects.packages import importr
 from rpy2 import robjects as ro
 from dataclasses import dataclass
@@ -30,7 +32,6 @@ def feols(fml:str, data:pd.DataFrame)->FixestModel:
 
 
 # Standard imports
-from __future__ import annotations
 from dataclasses import dataclass
 from functools import cached_property 
 import warnings
