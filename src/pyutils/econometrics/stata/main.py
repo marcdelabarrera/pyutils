@@ -25,6 +25,7 @@ from dataclasses import dataclass
 @dataclass
 class RegressionResult:
     coeftable:pd.DataFrame
+    call: str
 
 
     @classmethod
@@ -36,7 +37,7 @@ class RegressionResult:
 
         coeftable["p-value"] = 2 * (1 - norm.cdf(np.abs(coeftable["t-stat"])))
 
-        return cls(coeftable=coeftable)
+        return cls(coeftable=coeftable, call=ereturn["e(cmdline)"])
 
 
 def reghdfe(depvar:str, exog:list[str], absorb:str, vce:str, data:pd.DataFrame) -> RegressionResult:
