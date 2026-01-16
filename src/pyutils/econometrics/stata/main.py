@@ -40,19 +40,21 @@ class RegressionResult:
         return cls(coeftable=coeftable, call=ereturn["e(cmdline)"])
 
 
-def reghdfe(depvar:str, exog:list[str], absorb:str, vce:str, data:pd.DataFrame) -> RegressionResult:
+def reghdfe(depvar:str, exog:list[str], absorb:list[str], vce:str, data:pd.DataFrame) -> RegressionResult:
+    absorb = absorb if isinstance(absorb, list) else [absorb]
     stata.pdataframe_to_data(data, force=True)
     if any([data[i].dtype=='object' for i in exog]):
         string_vars = [i for i in exog if data[i].dtype=='object']
         for var in string_vars:
             encode_var(var)
         exog = [i if data[i].dtype!='object' else f"{i}_encoded" for i in exog]
-    stata.run(f'reghdfe {depvar} {" ".join(exog)}, absorb({absorb}) vce({vce})')
+    stata.run(f'reghdfe {depvar} {" ".join(exog)}, absorb({" ".join(absorb)}) vce({vce})')
     return RegressionResult.from_ereturn(stata.get_ereturn())
 
 
-def encode_var(var:str):
-    stata.run(f"encode {var}, generate({var}_encoded)")
+def encode_var(var:str, newvar:str|None=None):
+    newvar = newvar if newvar is not None else f"{var}_encoded"
+    stata.run(f"encode {var}, generate({newvar})")
 
 def install_reghdf():
     stata.run('ssc install require, replace')
