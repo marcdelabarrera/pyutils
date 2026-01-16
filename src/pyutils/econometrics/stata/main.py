@@ -42,8 +42,17 @@ class RegressionResult:
 
 def reghdfe(depvar:str, exog:list[str], absorb:str, vce:str, data:pd.DataFrame) -> RegressionResult:
     stata.pdataframe_to_data(data, force=True)
+    if any([data[i].dtype=='object' for i in exog]):
+        string_vars = [i for i in exog if data[i].dtype=='object']
+        for var in string_vars:
+            encode_var(var)
+        exog = [i if data[i].dtype!='object' else f"{i}_encoded" for i in exog]
     stata.run(f'reghdfe {depvar} {" ".join(exog)}, absorb({absorb}) vce({vce})')
     return RegressionResult.from_ereturn(stata.get_ereturn())
+
+
+def encode_var(var:str):
+    stata.run(f"encode {var}, generate({var}_encoded)")
 
 def install_reghdf():
     stata.run('ssc install require, replace')
