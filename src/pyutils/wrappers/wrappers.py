@@ -56,7 +56,7 @@ def timer(func):
 
 
 
-def filter(func, msg:str=None, logger=None, silent = False):
+def filter(func, msg:str|None=None, logger=None, silent = False):
     '''
     Wrapper that prints the size of an input dataframe and the size of the output dataframe
     '''
