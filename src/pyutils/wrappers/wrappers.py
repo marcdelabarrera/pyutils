@@ -25,7 +25,26 @@ import time
 
 import pandas as pd
 
-#from .tools import format_time
+def format_time(elapsed_seconds: float) -> str:
+    """Format elapsed time into a human-readable string.
+
+    Args:
+        elapsed_seconds: Time in seconds (e.g., from time.time() - start_time)
+
+    Returns:
+        Formatted string like "1h 23m 45s" or "23m 45s" if hours is 0
+    """
+    hours = int(elapsed_seconds // 3600)
+    minutes = int((elapsed_seconds % 3600) // 60)
+    seconds = elapsed_seconds % 60
+
+    if hours > 0:
+        return f"{hours}h {minutes}m {seconds:.1f}s"
+    elif minutes > 0:
+        return f"{minutes}m {seconds:.1f}s"
+    else:
+        return f"{seconds:.1f}s"
+
 
 def timer(func):
     def wrapper(*args, **kwargs):
