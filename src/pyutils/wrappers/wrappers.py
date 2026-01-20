@@ -25,7 +25,7 @@ import time
 
 import pandas as pd
 
-from .tools import format_time
+#from .tools import format_time
 
 def timer(func):
     def wrapper(*args, **kwargs):

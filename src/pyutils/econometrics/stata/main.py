@@ -40,7 +40,10 @@ class RegressionResult:
         return cls(coeftable=coeftable, call=ereturn["e(cmdline)"])
 
 
-def reghdfe(depvar:str, exog:list[str], absorb:list[str], vce:str, data:pd.DataFrame) -> RegressionResult:
+def reghdfe(depvar:str, exog:list[str],
+            absorb:list[str],
+            vce:str,
+            data:pd.DataFrame) -> RegressionResult:
     absorb = absorb if isinstance(absorb, list) else [absorb]
     stata.pdataframe_to_data(data, force=True)
     if any([data[i].dtype=='object' for i in exog]):
