@@ -70,9 +70,9 @@ def interval_to_category(x:pd.Series,
 def percentile_bin(df:pd.DataFrame, 
                    var:str,
                    bins:list[float],
-                   by:list[str]=None,
+                   by:list[str]|None=None,
                    as_categorical:bool=False,
-                   labels:list[str]=None,
+                   labels:list[str]|None=None,
                    duplicates:str='raise') -> pd.Series:
     '''
     Bins a variable by group
@@ -214,7 +214,7 @@ def to_parquet(df:pd.DataFrame, path:Path, overwrite:bool=True)->None:
 
 
 
-def add_readme(readme:str, display:bool=True, filename:Path=None)->None:
+def add_readme(readme:str, display:bool=True, filename:Path|None|str=None)->None:
     '''
     Adds a readme file
     '''
@@ -249,12 +249,14 @@ def format_time(seconds:int)->str:
         return f'{seconds:.0f} sec'
     elif seconds>=60:
         return f'{seconds//60:.0f} min {seconds%60:.0f} sec'
+    else:
+        return f'{seconds//3600:.0f} hr {(seconds%3600)//60:.0f} min {seconds%60:.0f} sec'
 
 def aggregate_by(df: pd.DataFrame,
                  col: str,
                  by:list[str],
                  functions:list[str],
-                 custom_functions:dict=None)->pd.DataFrame:
+                 custom_functions:dict|None=None)->pd.DataFrame:
     '''
     Given a tax return dataset, aggregates and computes the
     count, mean, std, q10, q50 and q90
@@ -279,15 +281,15 @@ def aggregate_by(df: pd.DataFrame,
         return_series = True
 
     FUNCTIONS = {'n_obs': pd.NamedAgg(column = col, aggfunc = "count"),
-              'mean': pd.NamedAgg(column = col, aggfunc = "mean"),
-              'sd':  pd.NamedAgg(column = col, aggfunc = 'std'),
-              'var':  pd.NamedAgg(column = col, aggfunc = 'var'),
-	      'min': pd.NamedAgg(column = col, aggfunc = "min"),
-              'q10': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.1)),
-              'q50': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.5)),
-              'q90': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.9)),
-              'max': pd.NamedAgg(column = col, aggfunc = "max"),
-              'sum': pd.NamedAgg(column = col, aggfunc = "sum")}
+                'mean': pd.NamedAgg(column = col, aggfunc = "mean"),
+                'sd':  pd.NamedAgg(column = col, aggfunc = 'std'),
+                'var':  pd.NamedAgg(column = col, aggfunc = 'var'),
+                'min': pd.NamedAgg(column = col, aggfunc = "min"),
+                'q10': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.1)),
+                'q50': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.5)),
+                'q90': pd.NamedAgg(column = col, aggfunc = lambda x: x.quantile(0.9)),
+                'max': pd.NamedAgg(column = col, aggfunc = "max"),
+                'sum': pd.NamedAgg(column = col, aggfunc = "sum")}
     
     functions = {i:FUNCTIONS[i] for i in functions}
     if custom_functions:
@@ -315,7 +317,7 @@ def interval_to_caregory(x:pd.Series, labels=None)->pd.Series:
 def bin(x:pd.Series,
            bins:list[float],
            as_categorical:bool=False,
-           labels:list[str]=None,
+           labels:list[str]|None=None,
            **kwargs)->pd.Series:
     '''
     Bins a variable by group
@@ -336,9 +338,9 @@ def bin(x:pd.Series,
 def percentile_bin(df:pd.DataFrame,
            var:str, 
            bins:list[float],
-           by:list[str]=None,
+           by:list[str]|None=None,
            as_categorical:bool=False,
-           labels:list[str]=None,
+           labels:list[str]|None=None,
            duplicates:str='raise')->pd.Series:
     '''
     Bins a variable by group
@@ -484,7 +486,7 @@ def winsorize(x:pd.Series, lower: float=0, upper:float=1)->pd.Series:
     '''
 
     if pd.api.types.is_integer_dtype(x):
-    	return x.clip(int(x.quantile(lower)), int(x.quantile(upper)))
+        return x.clip(int(x.quantile(lower)), int(x.quantile(upper)))
     else:
         return x.clip(x.quantile(lower), x.quantile(upper))
 
@@ -494,7 +496,7 @@ def load_json(path:Path)->dict:
     return out
 
 def parse_number(x:str)->int:
-    return int(re.findall('\d+',x)[0])
+    return int(re.findall(r'\d+',x)[0])
 
 
 def _to_Int(x:pd.Series, dtype: str='Int64')->pd.Series:
@@ -544,7 +546,7 @@ def astype(df: pd.DataFrame, dtypes:dict)->pd.DataFrame:
 
 
 
-def test_na(df:pd.DataFrame, columns:list[str]=None)->None:
+def test_na(df:pd.DataFrame, columns:list[str]|None=None)->None:
      """
      Prints the share of NA in a given column
      """
@@ -553,7 +555,7 @@ def test_na(df:pd.DataFrame, columns:list[str]=None)->None:
      else:
          print(f'{df.isna().mean().rename("NA share")}')
 
-def dropna(df: pd.DataFrame, subset:list[str]=None)->pd.DataFrame:
+def dropna(df: pd.DataFrame, subset:list[str]|None=None)->pd.DataFrame:
     initial_rows = len(df)
     df = df.dropna(subset=subset)
     print(f'dropna({subset}). {initial_rows-len(df):,} ({100*(initial_rows-len(df))/initial_rows:.3f}%) columns droped')
@@ -568,7 +570,7 @@ def sort_values(df:pd.DataFrame, by, verbose:bool=True)->pd.DataFrame:
     return df
 
     
-def find_duplicates(df: pd.DataFrame, subset:list[str]=None)->pd.DataFrame:
+def find_duplicates(df: pd.DataFrame, subset:list[str]|None=None)->pd.DataFrame|None:
     '''
     Returns a dataframe containing the duplicated rows based on a subset of columns.
     '''
@@ -579,7 +581,7 @@ def find_duplicates(df: pd.DataFrame, subset:list[str]=None)->pd.DataFrame:
     else:
         return duplicates
 
-def drop_duplicates(df: pd.DataFrame, subset: list[str]=None, verbose=False)->pd.DataFrame:
+def drop_duplicates(df: pd.DataFrame, subset: list[str]|None=None, verbose=False)->pd.DataFrame:
     initial_rows = len(df)
     df = df[~df.duplicated(subset=subset, keep='first')]
     if verbose:
@@ -629,7 +631,7 @@ def left_merge(left:pd.DataFrame, right:pd.DataFrame, on: list[str], verbose:boo
     return out
 
 
-def roll_categories(x:pd.Series, shift:int=1)->pd.Series:
+def roll_categories(x:pd.Series, shift:int=1)->pd.Categorical:
     '''
     Rolls categoriey orders.
     '''
