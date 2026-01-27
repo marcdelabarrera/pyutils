@@ -452,9 +452,12 @@ def log(x:ArrayLike)->ArrayLike:
         x_log = np.log(x, where=x>0)
         x_log = np.where(x>0, x_log, np.nan)
     elif isinstance(x, pd.Series):
-        x = x.fillna(0)
-        x_log = np.log(x, where=x>0)
-        x_log = x_log.where(x>0)
+        vals = x.fillna(0).values
+        result = np.empty_like(vals, dtype=float)
+        mask = vals > 0
+        result[mask] = np.log(vals[mask])
+        result[~mask] = np.nan
+        x_log = pd.Series(result, index=x.index)
     else:
         raise ValueError(f'Unrecognized type {type(x)}')
     return x_log
