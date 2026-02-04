@@ -1,11 +1,11 @@
-
+from collections.abc import Callable
 from dataclasses import dataclass
-import jax.numpy as jnp
+import warnings
+
 import jax
+import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import Partial
-#from jax.scipy.optimize import root_scalar
-import warnings
 
 ALPHA = (jnp.sqrt(5)-1)/2
 
@@ -18,7 +18,7 @@ class RootResults:
   it: int
   success: bool
 
-def init_ab(f:callable, a, b)->tuple[Array,Array]:
+def init_ab(f: Callable[[Array], Array], a, b) -> tuple[Array, Array]:
   '''
   Initializes the lower and upper bounds of the bracket
   '''
@@ -33,12 +33,12 @@ def init_ab(f:callable, a, b)->tuple[Array,Array]:
     a = jnp.ones_like(f(a))*a
     b = jnp.ones_like(f(b))*b
   else:
-    return ValueError('TBD')
+    return ValueError('TBD') # type: ignore
   if jnp.any(a>b):
     raise ValueError('The lower bound of the bracket must be less than the upper bound')
   return a,b
 
-def init_state(f: callable, a:Array, b:Array)->OptState:
+def init_state(f: Callable[[Array], Array], a: Array, b: Array) -> OptState:
   '''
   '''
   d = ALPHA*(b-a)
@@ -48,7 +48,7 @@ def init_state(f: callable, a:Array, b:Array)->OptState:
   f2 = f(x2)**2
   return {'d':d,'x1':x1,'x2':x2,'f1':f1,'f2':f2, 'it':0}
 
-def update(f: callable, state:OptState)->OptState:
+def update(f: Callable[[Array], Array], state: OptState) -> OptState:
   a,b = state['a'], state['b']
   d = ALPHA*(b-a)
   x1 = a+d
@@ -60,7 +60,9 @@ def update(f: callable, state:OptState)->OptState:
   b = jnp.where(~idx, x1, b)
   return {"a":a, "b":b, 'it': state['it']+1}
 
-def root_scalar(f: callable, a: Array, b: Array, tol:float=1e-5, maxit:int=100, errors = 'warn', **kwargs):
+def root_scalar(f: Callable[..., Array],
+                a: Array,
+                b: Array, tol: float = 1e-5, maxit: int = 100, errors: str = 'warn', **kwargs) -> RootResults:
   """
   Find a root
   """
@@ -85,4 +87,4 @@ def root_scalar(f: callable, a: Array, b: Array, tol:float=1e-5, maxit:int=100, 
   return RootResults(x = x,
                      fun = f(x),
                      it = opt_results['it'],
-                     success = jnp.all(jnp.abs(f(x))<tol))
+                     success = bool(jnp.all(jnp.abs(f(x))<tol)))

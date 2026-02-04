@@ -1,5 +1,7 @@
 import warnings
+from collections.abc import Callable
 from dataclasses import dataclass
+
 import jax
 from jax import Array
 import jax.numpy as jnp
@@ -19,7 +21,7 @@ class SolutionNotFoundError(Exception):
     pass
 
 
-def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"max":4,"n":1000}})->Array:
+def newton_step(f: Callable[[Array], Array], J: Callable[[Array], Array], x: Array, config={"steps":{"min":1e-8,"max":4,"n":1000}}) -> tuple[Array, bool, Array]:
     delta = jnp.linalg.solve(J(x), -f(x))
     if jnp.all(jnp.isnan(delta)):
         raise SolutionNotFoundError("Jacobian is singular, cannot find Newton step.")
@@ -31,8 +33,8 @@ def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"ma
         warnings.warn("NaN encountered in line search candidates, ignoring those candidates.")
     elif jnp.all(jnp.isnan(candidates)):
         raise SolutionNotFoundError("All candidates in line search are NaN.")
-    x_new = x_new[:,jnp.argmin(candidates)]
-    step_size = step[jnp.argmin(candidates)]
+    x_new = x_new[:,jnp.argmin(candidates)] # type: ignore
+    step_size = step[jnp.argmin(candidates)] # type: ignore
     if jnp.linalg.norm(f(x_new)) > jnp.linalg.norm(f(x)):
         warnings.warn(f"Line search failed: no acceptable step size found and error is {jnp.linalg.norm(f(x))}")
         stop = True
@@ -41,7 +43,7 @@ def newton_step(f:callable, J:callable, x:Array, config={"steps":{"min":1e-8,"ma
     return x_new, stop, step_size
 
 
-def newton_solver(f:callable, x0:Array, tol=1e-6, maxit=100, has_aux=False,verbose=True, **kwargs)->NewtonResult:
+def newton_solver(f: Callable[[Array], Array], x0: Array, tol: float = 1e-6, maxit: int = 100, has_aux: bool = False, verbose: bool = True, **kwargs) -> NewtonResult:
     """
     Looks for f(x)=0 by using Newton's method. Finds x such that jnp.linalg.norm(f(x))<tol.
     """
