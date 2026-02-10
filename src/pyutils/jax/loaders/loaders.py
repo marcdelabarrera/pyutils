@@ -30,7 +30,7 @@ def load_dict(path):
         data_numpy = pickle.load(f)
     return to_jax(data_numpy)
 
-def save_pytree(path:Path, pytree:dict, overwrite:bool=False):
+def save_pytree(path:Path, pytree:dict, overwrite:bool=False, mkdir:bool=False):
     """
     Saves a pytree (dict of dicts of jax.Arrays) to a JSON file
     """
@@ -38,7 +38,8 @@ def save_pytree(path:Path, pytree:dict, overwrite:bool=False):
 
     if path.exists() and overwrite is False:
         raise FileExistsError(f"File {path} already exists. Use overwrite=True to overwrite.")
-    
+    if mkdir:
+        path.parent.mkdir(parents=True, exist_ok=True)
     pytree = jax.tree_util.tree_map(
                     lambda x: x.tolist() if isinstance(x, Array) else x,
                     pytree)
