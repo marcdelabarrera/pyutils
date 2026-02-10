@@ -2,7 +2,8 @@ import jax
 from jax import Array
 import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
-from .sparse import spdiagm, speye, spzeros, kron
+from .sparse import speye, kron
+from .stencils_1d import compute_forward_derivative, compute_backward_derivative, compute_second_derivative
 
 def vvmap(fun, in_axes:int=0, out_axes:int=0):
     return jax.vmap(jax.vmap(fun, in_axes = in_axes, out_axes = out_axes), in_axes = in_axes, out_axes = out_axes)
@@ -10,44 +11,11 @@ def vvmap(fun, in_axes:int=0, out_axes:int=0):
 def compute_vec_index(index:tuple, shape:tuple, order = "C")-> Array:
     return jnp.ravel_multi_index(index, shape, order=order)
 
-def compute_forward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
-    """
-    Computes the matrix D such that D@f = df/dx using forward differences. Given a vector
-    x[i] for i = 0,...,n-1 and a function f defined on those points, then
-
-    df_i/dx = (f_{i+1} - f_{i}) / (x_{i+1} - x_{i})
-
-    if ghost_node is False, then df[n-1]/dx = 0. If ghost_node is True
-    then df[n-1]/dx = -f[n-1] / (x[n-1] - x[n-2]). That is, assumes a ghost node
-    at position x[n] = x[n-1] + (x[n-1]-x[n-2]) with f[n] = 0.
-    """
-    if ghost_node:
-        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([1/(x[-1]-x[-2])]))))
-    else:
-        return spdiagm(1/jnp.diff(x), k = 1) - spdiagm(jnp.concatenate((1/jnp.diff(x), jnp.array([0]))))
-
-def compute_backward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
-    """
-    Computes the matrix D such that D@f = df/dx using backward differences. Given a vector
-    x[i] for i = 0,...,n-1 and a function f defined on those points, then
-    df_i/dx = (f_i - f_{i-1}) / (x_i - x_{i-1})
-
-    if ghost_node is False, then df[0]/dx = 0. If ghost_node is True
-    then df[0]/dx = f[0] / (x[1] - x[0]). That is, assumes a ghost node
-    at position x[-1] = x[0] - (x[1]-x[0]) with f[-1] = 0.
-    """
-    if ghost_node:
-        return spdiagm(jnp.concatenate((jnp.array([1/(x[1]-x[0])]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
-    else:
-        return spdiagm(jnp.concatenate((jnp.array([0]), 1/jnp.diff(x)))) - spdiagm(1/jnp.diff(x), k=-1)
-
-def compute_second_derivative(x:Array) -> BCOO:
-    n = x.shape[0]
-    dx = jnp.diff(x)
-    dx2 = jnp.concatenate((dx[:1],dx))*jnp.concatenate((dx,dx[-1:]))
-    return spdiagm(1/dx2[:-1], k=1) + spdiagm(1/dx2[1:], k=-1) - spdiagm(jnp.full(n,2).at[0].set(1).at[-1].set(1)/dx2)
-
 def compute_D_x(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
+    """
+    Computes the matrix D such that D@f = df/dx using finite differences. Given a vector
+    x[i] for i = 0,...,n-1 and a function f defined on those points, then  df_i/dx = (f_{i+1} - f_{i}) / (x_{i+1} - x_{i}) for forward differences,
+    and df_i/dx = (f_i - f_{i-1}) / (x_i - x_{i-1}) for backward differences."""
     if direction == 'forward':
         return kron(compute_forward_derivative(x, ghost_node=ghost_node), speye(y.shape[0]))
     elif direction == 'backward':
@@ -56,6 +24,12 @@ def compute_D_x(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
         raise ValueError("Direction must be 'forward' or 'backward'")
 
 def compute_D_y(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
+    """
+    Computes the matrix D such that D@f = df/dy using finite differences. Given a vector
+    y[j] for j = 0,...,m-1 and a function f defined on those points, then  df_j/dy = (f_{j+1} - f_{j}) / (y_{j+1} - y_{j}) for forward differences,
+    and df_j/dy = (f_j - f_{j-1}) / (y_j - y_{j-1}) for backward differences.
+    """
+
     if direction == 'forward':
         return kron(speye(x.shape[0]), compute_forward_derivative(y, ghost_node=ghost_node))
     elif direction == 'backward':
@@ -63,26 +37,23 @@ def compute_D_y(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
     else:
         raise ValueError("Direction must be 'forward' or 'backward'")
     
-def compute_D_xx(x:Array, y:Array|None=None)-> BCOO:
-    if y is None:
-        return compute_second_derivative(x)
-    else:
-        return kron(compute_second_derivative(x), speye(y.shape[0]))
+def compute_D_xx(x:Array, y:Array)-> BCOO:
+    return kron(compute_second_derivative(x), speye(y.shape[0]))
 
 def compute_D_yy(x:Array, y:Array)-> BCOO:
     return kron(speye(x.shape[0]), compute_second_derivative(y))
 
-def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str, ghost_node:bool=False)-> BCOO:
-    if direction_x == 'forward' and direction_y == 'forward':
-        return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
-    elif direction_x == 'backward' and direction_y == 'backward':
-        return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
-    elif direction_x == 'forward' and direction_y == 'backward':
-        return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
-    elif direction_x == 'backward' and direction_y == 'forward':
-        return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
-    else:
-        raise ValueError("Directions must be 'forward' or 'backward'")
+# def compute_D_xy(x:Array, y:Array, direction_x:str, direction_y:str, ghost_node:bool=False)-> BCOO:
+#     if direction_x == 'forward' and direction_y == 'forward':
+#         return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
+#     elif direction_x == 'backward' and direction_y == 'backward':
+#         return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
+#     elif direction_x == 'forward' and direction_y == 'backward':
+#         return kron(compute_forward_derivative(x, ghost_node=ghost_node), compute_backward_derivative(y, ghost_node=ghost_node))
+#     elif direction_x == 'backward' and direction_y == 'forward':
+#         return kron(compute_backward_derivative(x, ghost_node=ghost_node), compute_forward_derivative(y, ghost_node=ghost_node))
+#     else:
+#         raise ValueError("Directions must be 'forward' or 'backward'")
     
 
 def compute_gradient(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)-> Array:
@@ -107,7 +78,7 @@ def compute_hessian(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)
     f_xx = (D_xx @ f.flatten()).reshape(f.shape)
     D_yy = compute_D_yy(x, y)
     f_yy = (D_yy @ f.flatten()).reshape(f.shape)
-    D_xy = compute_D_xy(x, y, direction_x, direction_y)
+    D_xy = compute_D_xy(x, y)
     f_xy = (D_xy @ f.flatten()).reshape(f.shape)
 
     return  jnp.stack((jnp.stack((f_xx, f_xy), axis=-1),
