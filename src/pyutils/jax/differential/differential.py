@@ -9,7 +9,7 @@ def vvmap(fun, in_axes:int=0, out_axes:int=0):
     return jax.vmap(jax.vmap(fun, in_axes = in_axes, out_axes = out_axes), in_axes = in_axes, out_axes = out_axes)
 
 def compute_vec_index(index:tuple, shape:tuple, order = "C")-> Array:
-    return jnp.ravel_multi_index(index, shape, order=order)
+    return jnp.ravel_multi_index(index, shape, order=order).astype(jnp.int32)
 
 def compute_D_x(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
     """
