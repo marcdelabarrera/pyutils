@@ -118,6 +118,8 @@ def compute_interpolation_weights(x: float | Array, grid: Array) -> tuple[Array,
 
     return indices, weights
 
+
+
 @jax.jit
 def compute_interpolation_weights_dense(x: float | Array, grid: Array) -> Array:
     """
@@ -180,3 +182,25 @@ def compute_interpolation_weights_2d(x, y, grid_x: Array, grid_y: Array):
     ])
     
     return indices, weights
+
+
+
+def compute_interpolation_weights_2d_dense(x, y,
+                                           grid_x: Array,
+                                           grid_y: Array,
+                                           vec:bool = True) -> Array:
+    """
+    Given 2D grids and a point (x, y), returns a dense flattened vector of
+    bilinear interpolation weights.
+
+    Returns:
+        Array of shape (len(grid_x) * len(grid_y),) with weights at the four
+        surrounding grid points, zero elsewhere.
+    """
+    indices, weights = compute_interpolation_weights_2d(x, y, grid_x, grid_y)
+    row = jnp.zeros(len(grid_x) * len(grid_y))
+    out = row.at[indices].set(weights)
+    if vec:
+        return out
+    else:
+        return out.reshape(len(grid_x), len(grid_y))

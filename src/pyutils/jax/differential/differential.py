@@ -136,6 +136,94 @@ def compute_D_xy(x:Array, y:Array) -> BCOO:
     return D_xy
 
 
+def compute_D_xi(x: Array, y: Array) -> BCOO:
+    """Second derivative along the (1,1) diagonal direction.
+
+    Stencil at interior point (i,j):
+        D_xi V_{ij} = c_- V_{i-1,j-1} + c_0 V_{ij} + c_+ V_{i+1,j+1}
+
+    where c_-, c_+ > 0, c_0 < 0, and c_- + c_0 + c_+ = 0 (M-matrix).
+
+    This approximates:
+        (h_x^2 V_xx + 2 h_x h_y V_xy + h_y^2 V_yy) / (h_x^2 + h_y^2)
+
+    Boundary rows are zero.
+    """
+    x = jnp.asarray(x); y = jnp.asarray(y)
+    nx, ny = int(x.size), int(y.size)
+    n = nx * ny
+    shape2d = (nx, ny)
+
+    ix = jnp.arange(1, nx - 1)
+    iy = jnp.arange(1, ny - 1)
+    IX, IY = jnp.meshgrid(ix, iy, indexing='ij')
+    IX = IX.ravel()
+    IY = IY.ravel()
+
+    # Arc-length step sizes along (1,1) diagonal
+    s_plus = jnp.sqrt((x[IX + 1] - x[IX])**2 + (y[IY + 1] - y[IY])**2)
+    s_minus = jnp.sqrt((x[IX] - x[IX - 1])**2 + (y[IY] - y[IY - 1])**2)
+
+    coef_bwd = 2.0 / (s_minus * (s_plus + s_minus))
+    coef_ctr = -2.0 / (s_plus * s_minus)
+    coef_fwd = 2.0 / (s_plus * (s_plus + s_minus))
+
+    row = jnp.ravel_multi_index((IX, IY), shape2d)
+    col_bwd = jnp.ravel_multi_index((IX - 1, IY - 1), shape2d)
+    col_fwd = jnp.ravel_multi_index((IX + 1, IY + 1), shape2d)
+
+    rows = jnp.concatenate([row, row, row])
+    cols = jnp.concatenate([col_bwd, row, col_fwd])
+    vals = jnp.concatenate([coef_bwd, coef_ctr, coef_fwd])
+
+    indices = jnp.column_stack([rows, cols])
+    return BCOO((vals, indices), shape=(n, n))
+
+
+def compute_D_eta(x: Array, y: Array) -> BCOO:
+    """Second derivative along the (1,-1) anti-diagonal direction.
+
+    Stencil at interior point (i,j):
+        D_eta V_{ij} = c_- V_{i-1,j+1} + c_0 V_{ij} + c_+ V_{i+1,j-1}
+
+    where c_-, c_+ > 0, c_0 < 0, and c_- + c_0 + c_+ = 0 (M-matrix).
+
+    This approximates:
+        (h_x^2 V_xx - 2 h_x h_y V_xy + h_y^2 V_yy) / (h_x^2 + h_y^2)
+
+    Boundary rows are zero.
+    """
+    x = jnp.asarray(x); y = jnp.asarray(y)
+    nx, ny = int(x.size), int(y.size)
+    n = nx * ny
+    shape2d = (nx, ny)
+
+    ix = jnp.arange(1, nx - 1)
+    iy = jnp.arange(1, ny - 1)
+    IX, IY = jnp.meshgrid(ix, iy, indexing='ij')
+    IX = IX.ravel()
+    IY = IY.ravel()
+
+    # Arc-length step sizes along (1,-1) anti-diagonal
+    s_plus = jnp.sqrt((x[IX + 1] - x[IX])**2 + (y[IY] - y[IY - 1])**2)
+    s_minus = jnp.sqrt((x[IX] - x[IX - 1])**2 + (y[IY + 1] - y[IY])**2)
+
+    coef_bwd = 2.0 / (s_minus * (s_plus + s_minus))
+    coef_ctr = -2.0 / (s_plus * s_minus)
+    coef_fwd = 2.0 / (s_plus * (s_plus + s_minus))
+
+    row = jnp.ravel_multi_index((IX, IY), shape2d)
+    col_bwd = jnp.ravel_multi_index((IX - 1, IY + 1), shape2d)
+    col_fwd = jnp.ravel_multi_index((IX + 1, IY - 1), shape2d)
+
+    rows = jnp.concatenate([row, row, row])
+    cols = jnp.concatenate([col_bwd, row, col_fwd])
+    vals = jnp.concatenate([coef_bwd, coef_ctr, coef_fwd])
+
+    indices = jnp.column_stack([rows, cols])
+    return BCOO((vals, indices), shape=(n, n))
+
+
 
 
 
@@ -149,6 +237,7 @@ def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
     D_y_backward = compute_D_y(x, y, 'backward', ghost_node=ghost_node)
     D_xx = compute_D_xx(x, y)
     D_yy = compute_D_yy(x, y)
-    D_xy = compute_D_xy(x, y) 
+    D_xi = compute_D_xi(x, y)
+    D_eta = compute_D_eta(x, y)
     return (D_x_forward, D_x_backward, D_y_forward, D_y_backward,
-            D_xx, D_yy, D_xy)
+            D_xx, D_yy, D_xi, D_eta)
