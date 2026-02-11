@@ -54,7 +54,7 @@ class BrownianWithReset2D:
 
     def pdf(self, x,y):
         Sigma = self.Sigma
-        sigma_x, sigma_y = Sigma[0,0], Sigma[1,1]
+        sigma_x, sigma_y = jnp.sqrt(Sigma[0,0]), jnp.sqrt(Sigma[1,1])
         rho_xy = Sigma[0,1]/(sigma_x*sigma_y)
         chi = self.chi
         x_entry, y_entry = self.entry

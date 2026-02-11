@@ -241,3 +241,10 @@ def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
     D_eta = compute_D_eta(x, y)
     return (D_x_forward, D_x_backward, D_y_forward, D_y_backward,
             D_xx, D_yy, D_xi, D_eta)
+
+
+
+def is_monotonic(A: Array)-> bool:
+    diag = jnp.diag(A)
+    off_diag = A - jnp.diag(diag)
+    return bool(jnp.all(diag <= 0)) and bool(jnp.all(off_diag >= 0))
