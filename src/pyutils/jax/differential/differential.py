@@ -1,3 +1,6 @@
+from typing import Callable
+from collections.abc import Sequence
+
 import jax
 from jax import Array
 import jax.numpy as jnp
@@ -5,7 +8,7 @@ from jax.experimental.sparse import BCOO
 from .sparse import speye, kron
 from .stencils_1d import compute_forward_derivative, compute_backward_derivative, compute_second_derivative
 
-def vvmap(fun, in_axes:int|tuple[int|None]|list[int|None]=0, out_axes:int|tuple[int|None]|list[int|None]=0):
+def vvmap(fun: Callable, in_axes: int | None | Sequence[int | None] = 0, out_axes: int | None | Sequence[int | None] = 0) -> Callable:
     return jax.vmap(jax.vmap(fun, in_axes = in_axes, out_axes = out_axes), in_axes = in_axes, out_axes = out_axes)
 
 def compute_vec_index(index:tuple, shape:tuple, order = "C")-> Array:
