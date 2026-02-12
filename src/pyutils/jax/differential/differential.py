@@ -233,9 +233,7 @@ def compute_D_eta(x: Array, y: Array) -> BCOO:
 
 
 
-
-
-def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
+def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)-> tuple[BCOO, BCOO, BCOO, BCOO, BCOO, BCOO, BCOO, BCOO, BCOO]:
     """
     Computes the differential matrices for 2D grid defined by vectors x and y.
     """
