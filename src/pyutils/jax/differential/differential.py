@@ -89,6 +89,11 @@ def compute_hessian(f:Array, x:Array, y:Array, direction_x:str, direction_y:str)
 
 
 def compute_D_xy(x:Array, y:Array) -> BCOO:
+    """
+    Computes D_xy such that D_xy @ f = d^2f/dxdy using a 5-point stencil.
+    For interior points, the stencil is:D_xy f_{ij} = (f_{i+1,j+1} - f_{i+1,j-1} - f_{i-1,j+1} + f_{i-1,j-1}) / (4 * dx * dy)where dx = x_{i+1} - x_{i-1} and dy   
+    """
+
     x = jnp.asarray(x); y = jnp.asarray(y)
     nx, ny = int(x.size), int(y.size)
     shape2d = (nx, ny); n = nx * ny
@@ -242,8 +247,9 @@ def build_differential_matrices(x:Array, y:Array, ghost_node:bool=False)->tuple:
     D_yy = compute_D_yy(x, y)
     D_xi = compute_D_xi(x, y)
     D_eta = compute_D_eta(x, y)
+    D_xy = compute_D_xy(x, y)
     return (D_x_forward, D_x_backward, D_y_forward, D_y_backward,
-            D_xx, D_yy, D_xi, D_eta)
+            D_xx, D_yy, D_xi, D_eta, D_xy)
 
 
 
@@ -251,3 +257,5 @@ def is_monotonic(A: Array)-> bool:
     diag = jnp.diag(A)
     off_diag = A - jnp.diag(diag)
     return bool(jnp.all(diag <= 0)) and bool(jnp.all(off_diag >= 0))
+
+
