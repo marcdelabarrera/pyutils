@@ -45,8 +45,11 @@ def compute_second_derivative(x:Array) -> BCOO:
 
     where h_L = x_i - x_{i-1} and h_R = x_{i+1} - x_i.
 
-    Boundary points use one-sided stencils.
+    Boundary points use one-sided 3-point stencils (same stencil as the
+    nearest interior point, since the second derivative of a parabola
+    through 3 points is constant).
     """
+    n = x.shape[0]
     dx = jnp.diff(x)  # dx[i] = x[i+1] - x[i], shape (n-1,)
 
     # For interior points, compute the correct coefficients
@@ -55,32 +58,50 @@ def compute_second_derivative(x:Array) -> BCOO:
     h_R = dx[1:]   # shape (n-2,), corresponds to points i=1,...,n-2
 
     # Coefficients for the centered 3-point stencil (interior points)
-    # Multiply by 2 for the standard second derivative formula
     coef_left = 2.0 / (h_L * (h_L + h_R))      # coefficient for f_{i-1}
     coef_center = -2.0 / (h_L * h_R)            # coefficient for f_i
     coef_right = 2.0 / (h_R * (h_L + h_R))      # coefficient for f_{i+1}
 
-    # Build diagonal coefficients for the full matrix
-    # Main diagonal: [boundary_left, coef_center[0], ..., coef_center[-1], boundary_right]
+    # Boundary: one-sided 3-point second derivative stencils
+    # At i=0 (forward): h0=dx[0], h1=dx[1]
+    h0, h1 = dx[0], dx[1]
+    bnd0_f0 = 2.0 / (h0 * (h0 + h1))
+    bnd0_f1 = -2.0 / (h0 * h1)
+    bnd0_f2 = 2.0 / (h1 * (h0 + h1))
+
+    # At i=n-1 (backward): ha=dx[-1], hb=dx[-2]
+    ha, hb = dx[-1], dx[-2]
+    bndN_fn3 = 2.0 / (hb * (ha + hb))
+    bndN_fn2 = -2.0 / (ha * hb)
+    bndN_fn1 = 2.0 / (ha * (ha + hb))
+
+    # Main diagonal (k=0)
     diag_main = jnp.concatenate([
-        jnp.array([-1.0 / dx[0]]),  # boundary at i=0
+        jnp.array([bnd0_f0]),
         coef_center,
-        jnp.array([-1.0 / dx[-1]])  # boundary at i=n-1
+        jnp.array([bndN_fn1])
     ])
 
-    # Upper diagonal (k=1): [boundary_left, coef_right[0], ..., coef_right[-1]]
+    # Upper diagonal (k=1)
     diag_upper = jnp.concatenate([
-        jnp.array([1.0 / dx[0]]),   # boundary at i=0
+        jnp.array([bnd0_f1]),
         coef_right
     ])
 
-    # Lower diagonal (k=-1): [coef_left[0], ..., coef_left[-1], boundary_right]
+    # Lower diagonal (k=-1)
     diag_lower = jnp.concatenate([
         coef_left,
-        jnp.array([1.0 / dx[-1]])   # boundary at i=n-1
+        jnp.array([bndN_fn2])
     ])
 
-    return spdiagm(diag_upper, k=1) + spdiagm(diag_lower, k=-1) + spdiagm(diag_main, k=0)
+    # k=+2 diagonal: only entry at row 0, col 2
+    diag_p2 = jnp.zeros(n - 2).at[0].set(bnd0_f2)
+
+    # k=-2 diagonal: only entry at row n-1, col n-3
+    diag_m2 = jnp.zeros(n - 2).at[-1].set(bndN_fn3)
+
+    return (spdiagm(diag_upper, k=1) + spdiagm(diag_lower, k=-1) +
+            spdiagm(diag_main, k=0) + spdiagm(diag_p2, k=2) + spdiagm(diag_m2, k=-2))
 
 
 
