@@ -3,7 +3,7 @@ from jax import Array
 import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 from .sparse import spdiagm
-
+from jax import tree_util
 from dataclasses import dataclass, field
 
 
@@ -20,6 +20,7 @@ class Axis:
         object.__setattr__(self, "max", jnp.max(self.points))
         object.__setattr__(self, "N", self.points.shape[0])
         object.__setattr__(self, "indices", jnp.arange(self.N))
+        object.__setattr__(self, "min", jnp.min(self.points))
 
     def __repr__(self):
         return f"Axis(points = {self.points})"
@@ -47,7 +48,6 @@ class Axis:
     
     def __getitem__(self, idx: int|Array)->Array:
          return self.points[idx]
-
 
 
 def compute_forward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
