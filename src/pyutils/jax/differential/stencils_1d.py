@@ -12,15 +12,15 @@ from dataclasses import dataclass, field
 class Axis:
     points: Array 
     indices: Array = field(init=False)
-    min: float = field(init=False)
-    max: float = field(init=False)
-    N: int = field(init=False)
+    start: float = field(init=False)
+    stop: float = field(init=False)
+    num: int = field(init=False)
 
     def __post_init__(self):
-        object.__setattr__(self, "max", jnp.max(self.points))
-        object.__setattr__(self, "N", self.points.shape[0])
-        object.__setattr__(self, "indices", jnp.arange(self.N))
-        object.__setattr__(self, "min", jnp.min(self.points))
+        object.__setattr__(self, "stop", jnp.max(self.points))
+        object.__setattr__(self, "num", self.points.shape[0])
+        object.__setattr__(self, "indices", jnp.arange(self.num))
+        object.__setattr__(self, "start", jnp.min(self.points))
 
     def __repr__(self):
         return f"Axis(points = {self.points})"
@@ -37,13 +37,13 @@ class Axis:
         return obj
     
     @classmethod
-    def uniform(cls, min: float, max: float, N: int):
-        points = jnp.linspace(min, max, N)
+    def uniform(cls, start: float, stop: float, num: int):
+        points = jnp.linspace(start, stop, num)
         return cls(points)
     
     @classmethod
-    def log(cls, min: float, max: float, N: int):
-        points = jnp.exp(jnp.linspace(jnp.log(min), jnp.log(max), N))
+    def log(cls, start: float, stop: float, num: int):
+        points = jnp.exp(jnp.linspace(jnp.log(start), jnp.log(stop), num))
         return cls(points)
     
     def __getitem__(self, idx: int|Array)->Array:
