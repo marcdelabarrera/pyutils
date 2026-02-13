@@ -4,6 +4,52 @@ import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 from .sparse import spdiagm
 
+from dataclasses import dataclass, field
+
+
+@tree_util.register_pytree_node_class
+@dataclass(frozen=True, slots=True)
+class Axis:
+    points: Array 
+    indices: Array = field(init=False)
+    min: float = field(init=False)
+    max: float = field(init=False)
+    N: int = field(init=False)
+
+    def __post_init__(self):
+        object.__setattr__(self, "max", jnp.max(self.points))
+        object.__setattr__(self, "N", self.points.shape[0])
+        object.__setattr__(self, "indices", jnp.arange(self.N))
+
+    def __repr__(self):
+        return f"Axis(points = {self.points})"
+
+    def tree_flatten(self):
+        children = (self.points,)
+        aux = None
+        return children, aux
+    
+    @classmethod
+    def tree_unflatten(cls, aux, children):
+        (points,) = children  
+        obj = cls(points)
+        return obj
+    
+    @classmethod
+    def uniform(cls, min: float, max: float, N: int):
+        points = jnp.linspace(min, max, N)
+        return cls(points)
+    
+    @classmethod
+    def log(cls, min: float, max: float, N: int):
+        points = jnp.exp(jnp.linspace(jnp.log(min), jnp.log(max), N))
+        return cls(points)
+    
+    def __getitem__(self, idx: int|Array)->Array:
+         return self.points[idx]
+
+
+
 def compute_forward_derivative(x:Array, ghost_node:bool=False) -> BCOO:
     """
     Computes the matrix D such that D@f = df/dx using forward differences. Given a vector
