@@ -43,7 +43,9 @@ def newton_step(f: Callable[[Array], Array], J: Callable[[Array], Array], x: Arr
     return x_new, stop, step_size
 
 
-def newton_solver(f: Callable[[Array], Array], x0: Array, tol: float = 1e-6, maxit: int = 100, has_aux: bool = False, verbose: bool = True, **kwargs) -> NewtonResult:
+def newton_solver(f: Callable[[Array], Array], x0: Array,
+                  tol: float = 1e-6, maxit: int = 100,
+                  has_aux: bool = False, verbose: bool = True, **kwargs) -> NewtonResult:
     """
     Looks for f(x)=0 by using Newton's method. Finds x such that jnp.linalg.norm(f(x))<tol.
     """

@@ -3,6 +3,51 @@ import jax.numpy as jnp
 from jax import Array
 from jax.scipy.stats import norm
 from jax.scipy.special import gamma
+from jax import tree_util
+from dataclasses import dataclass, field
+
+
+@tree_util.register_pytree_node_class
+@dataclass(frozen=True, slots=True)
+class Distribution:
+    """
+    Class representing a probability distribution defined by its pdf and cdf. 
+    The pdf must be non-negative and sum to 1. 
+    The cdf is computed from the pdf. 
+    This class is registered as a pytree node class so that it can be used with JAX transformations.
+    """
+
+    x: Array
+    pdf: Array
+    cdf: Array = field(init=False)
+
+    def __post_init__(self):
+        if jnp.any(self.pdf < 0):
+            raise ValueError("pdf must be non-negative")
+        if not jnp.isclose(jnp.sum(self.pdf), 1.0):
+            raise ValueError("pdf must sum to 1")
+        object.__setattr__(self, "cdf", jnp.cumsum(self.pdf))
+
+    def tree_flatten(self):
+        children = (self.x, self.pdf, self.cdf)
+        aux = None
+        return children, aux
+
+    @classmethod
+    def tree_unflatten(cls, aux, children):
+        x, pdf, cdf = children
+        obj = cls.__new__(cls)
+        object.__setattr__(obj, "x", x)
+        object.__setattr__(obj, "pdf", pdf)
+        object.__setattr__(obj, "cdf", cdf)
+        return obj
+    
+    @classmethod
+    def from_cdf(cls, x: Array, cdf: Array):
+        pdf = jnp.diff(jnp.concatenate([jnp.array([0.]),cdf]))
+        return cls(x, pdf)
+
+
 
 
 @dataclass
