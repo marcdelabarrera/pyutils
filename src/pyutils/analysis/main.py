@@ -640,7 +640,7 @@ def roll_categories(x:pd.Series, shift:int=1)->pd.Categorical:
     '''
     return pd.Categorical(x,np.roll(x.unique(),shift),ordered=True)
 
-def min_cell_size(df:pd.DataFrame, cell:list[str], min_size:int)->pd.DataFrame:
+def min_cell_size(df:pd.DataFrame, cell:list[str]|str, min_size:int)->pd.DataFrame:
     '''
     Filters cells with a minimum cell size
     '''
