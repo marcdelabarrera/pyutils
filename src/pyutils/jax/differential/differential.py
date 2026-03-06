@@ -14,6 +14,15 @@ def vvmap(fun: Callable, in_axes: int | None | Sequence[int | None] = 0, out_axe
 def compute_vec_index(index:tuple, shape:tuple, order = "C")-> Array:
     return jnp.ravel_multi_index(index, shape, order=order).astype(jnp.int32)
 
+
+def compute_elasticity(f, argnum=0)->Callable:
+    def elasticity(*args, **kwargs):
+        dlogf = jax.grad(lambda *args, **kwargs: jnp.log(f(*args, **kwargs)), argnums=argnum)
+        return dlogf(*args, **kwargs)*args[argnum]
+    return elasticity
+
+
+
 def compute_D_x(x:Array, y:Array, direction:str, ghost_node:bool=False)-> BCOO:
     """
     Computes the matrix D such that D@f = df/dx using finite differences. Given a vector
