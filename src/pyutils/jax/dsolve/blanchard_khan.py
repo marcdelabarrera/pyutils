@@ -39,7 +39,11 @@ class BKModel:
         self.solution = solve_blanchard_khan_matrices(self.A, self.gamma, self.n)
         self.m = self.A.shape[0] - self.n
 
-    def solve_path(self, x0:Array, z:Array):
+    def solve_path(self, x0:Array, z:Array, T: int|None = None):
+        if T is None:
+            T = z.shape[1]
+        else:
+            z = jnp.concatenate([z, jnp.zeros((z.shape[0], T-z.shape[1]))], axis=1) 
         return solve_blanchard_khan_path(self.solution, x0, z)
 
 
@@ -47,6 +51,9 @@ def solve_blanchard_khan_path(matrices:BKSolution, x0:Array, z:Array):
     """
     Solves the system given a deterministic path of shocks z and initial state x0
     """
+
+    
+    
     B_11, B_12 = matrices.B_11, matrices.B_12
     C_12, C_22, C_21 = matrices.C_12, matrices.C_22, matrices.C_21
     J_1, J_2 = matrices.J_1, matrices.J_2
