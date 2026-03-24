@@ -3,6 +3,7 @@ from jax import Array
 from scipy.linalg import ordqz
 from jax.scipy.linalg import inv
 import jax.numpy as jnp
+from dataclasses import dataclass, field
 
 
 
@@ -46,47 +47,10 @@ def solve_klein(A:Array, B:Array, C:Array, k0:Array, z0:Array, periods=20):
     return k, d, z
 
 
-def solve_blanchard_khan(A:Array, gamma:Array, n:int):
-    """
-    Solves the system [X_t+1, P_t+1] = A [X_t, P_t] + gamma Z_t
-    where X is an (nx1) vector of variables predetermined at t; P is an (mx1) vector
-    
-    Returns Theta_x so X_t = Theta_x@X_t-1+... and Theta_p so P_t = Theta_p@X_t+...
-    #TODO: return full solutions
-    """
-    eigenvalues, V = jnp.linalg.eig(A)
-    idx = jnp.argsort(jnp.abs(eigenvalues))
-    eigenvalues = eigenvalues[idx]
-    V = V[:, idx]       
-    C = inv(V) 
-    C_inv = inv(C)         
-    J = jnp.diag(eigenvalues)
-    m_bar = int(jnp.sum(jnp.abs(eigenvalues)<=1))
-    n_bar = A.shape[0] - m_bar
-    m = A.shape[0] - n
-    if m == m_bar:
-        pass
-    if m_bar>m:
-        raise ValueError(f"Number of stable eigenvalues {m_bar} is larger than the number of forward looking variables {m}.")
-    elif m_bar<m:
-        raise ValueError(f"Number of stable eigenvalues {m_bar} is smaller than the number of forward looking variables {m}.")
 
-    J_1 = J[:n_bar,:n_bar]
-    J_2 = J[n_bar:,n_bar:]
-    C_11 = C[:n_bar,:n_bar]
-    C_12 = C[:n_bar,n_bar:]
-    C_21 = C[n_bar:,:n_bar]
-    C_22 = C[n_bar:,n_bar:]
-    B_11 = C_inv[:n_bar,:n_bar]
-    B_12 = C_inv[:n_bar,n_bar:]
-    B_21 = C_inv[n_bar:,:n_bar]
-    B_22 = C_inv[n_bar:,n_bar:]
-    gamma_1 = gamma[n_bar:,:]
-    gamma_2 = gamma[:n_bar,:]
+def inspect_eigenvalues(A:Array):
+    eigenvalues, _ = jnp.linalg.eig(A)
+    return jnp.sort(jnp.abs(eigenvalues))
 
-    Theta_x = B_11@J_1@inv(B_11)
-    Theta_p = -inv(C_22)@C_21
-    return Theta_x, Theta_p
-    
 
-   
+
