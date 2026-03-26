@@ -141,7 +141,7 @@ def solve_blanchard_khan_matrices(A:Array, gamma:Array, n:int)-> BKSolution:
     m_bar = int(jnp.sum(jnp.abs(eigenvalues)>1))
     if m_bar > m:
         raise ValueError(f"No Solution")
-    elif m_bar < n:
+    elif m_bar < m:
         raise ValueError(f"Infinite Solution")
 
     J_1 = J[:n_bar,:n_bar]
