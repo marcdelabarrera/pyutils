@@ -118,14 +118,14 @@ def solve_klein_path(solution: KleinSolution, k0:Array, z:Array, periods=20):
 
     k = jnp.zeros((k0.shape[0], periods+1))
     k = k.at[:, 0].set(k0.reshape(-1))
-    s = jnp.zeros((Z_11.shape[0], periods+1))
+    s = jnp.zeros((Z_11.shape[0], periods+1), dtype=jnp.complex128)
     d = jnp.zeros((Z_21.shape[0], periods+1))
 
     s0 = jnp.linalg.solve(
         Z_11,
         k0.reshape(-1, 1) - Z_12 @ u[:, 0].reshape(-1, 1)
     )
-    s = s.at[:, 0].set(jnp.real(s0).flatten())
+    s = s.at[:, 0].set(s0.flatten())
 
     d0 = Z_21 @ s[:, 0].reshape(-1, 1) + Z_22 @ u[:, 0].reshape(-1, 1)
     d = d.at[:, 0].set(jnp.real(d0).flatten())
@@ -139,7 +139,7 @@ def solve_klein_path(solution: KleinSolution, k0:Array, z:Array, periods=20):
         )
 
         s_next = jnp.linalg.solve(S_11, rhs)
-        s = s.at[:, t+1].set(jnp.real(s_next).flatten())
+        s = s.at[:, t+1].set(s_next.flatten())
 
         k_next = Z_11 @ s_next + Z_12 @ u[:, t+1].reshape(-1, 1)
         d_next = Z_21 @ s_next + Z_22 @ u[:, t+1].reshape(-1, 1)
